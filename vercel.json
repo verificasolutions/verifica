@@ -1,0 +1,29 @@
+{
+  "redirects": [
+    {
+      "source": "/verificawash",
+      "destination": "/verifica",
+      "permanent": true
+    },
+    {
+      "source": "/verificawash/:path*",
+      "destination": "/verifica/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "destination": "/verifica",
+      "permanent": false
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/jobs/return-reminders",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/jobs/lead-email-sequences",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+.next
+.vercel/output
+data
+*.log
+*.env
+.env*
+tsconfig.tsbuildinfo
+wrangler-tail.*

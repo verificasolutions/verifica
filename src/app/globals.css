@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0d1117;
+  --foreground: #f5f7fb;
+  --muted: #9aa4b2;
+  --card: #161b22;
+  --card-border: #30363d;
+  --accent: #00f5d4;
+  --accent-secondary: #38bdf8;
+  --surface-panel: rgba(255, 255, 255, 0.06);
+  --surface-soft: rgba(255, 255, 255, 0.04);
+  --surface-strong: #11161d;
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #f5f7fb;
+  --text-secondary: rgba(245, 247, 251, 0.82);
+  --text-muted: rgba(245, 247, 251, 0.62);
+  --text-soft: rgba(245, 247, 251, 0.42);
+  --overlay-strong: rgba(0, 0, 0, 0.58);
+  --status-waiting: #fbbf24;
+  --status-washing: #38bdf8;
+  --status-ready: #4ade80;
+}
+
+html[data-theme="light"] {
+  --background: #eef6f7;
+  --foreground: #10202a;
+  --muted: #5f6e78;
+  --card: #ffffff;
+  --card-border: rgba(15, 23, 32, 0.1);
+  --accent: #0bd8c2;
+  --accent-secondary: #38bdf8;
+  --surface-panel: rgba(255, 255, 255, 0.88);
+  --surface-soft: rgba(255, 255, 255, 0.68);
+  --surface-strong: #ffffff;
+  --surface-border: rgba(15, 23, 32, 0.1);
+  --text-primary: #10202a;
+  --text-secondary: rgba(16, 32, 42, 0.82);
+  --text-muted: rgba(16, 32, 42, 0.64);
+  --text-soft: rgba(16, 32, 42, 0.46);
+  --overlay-strong: rgba(8, 15, 23, 0.32);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(0, 245, 212, 0.08), transparent 35%),
+    linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 88%, #ffffff 12%) 100%);
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+::selection {
+  background: rgba(0, 245, 212, 0.3);
+  color: white;
+}

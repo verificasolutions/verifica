@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title>VerificWash</title>
+  <rect width="192" height="192" rx="36" fill="#0D1117"/>
+  <rect x="18" y="18" width="156" height="156" rx="30" fill="#161B22" stroke="#30363D" stroke-width="4"/>
+  <path d="M48 108c0-20.987 17.013-38 38-38h20c20.987 0 38 17.013 38 38v8H48z" fill="#38BDF8"/>
+  <path d="M72 108l10 24h28l10-24" fill="none" stroke="#00F5D4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="70" cy="112" r="10" fill="#0D1117" stroke="#F8FAFC" stroke-width="4"/>
+  <circle cx="122" cy="112" r="10" fill="#0D1117" stroke="#F8FAFC" stroke-width="4"/>
+  <path d="M70 66l12-18h28l12 18" fill="none" stroke="#F8FAFC" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

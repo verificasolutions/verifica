@@ -21,6 +21,7 @@ export async function getOperationsDashboardUseCase(options?: {
   selectedServiceId?: string | null;
   selectedEmployeeId?: string | null;
   appointmentMonth?: string | null;
+  mode?: "board" | "full";
 }) {
   const context = await requireOwnerOrManager();
   const appointmentMonthValue = (options?.appointmentMonth ?? "").trim();
@@ -28,6 +29,62 @@ export async function getOperationsDashboardUseCase(options?: {
   const referenceDate = new Date();
   const appointmentCalendarYear = appointmentMonthMatch ? Number(appointmentMonthMatch[1]) : referenceDate.getFullYear();
   const appointmentCalendarMonth = appointmentMonthMatch ? Number(appointmentMonthMatch[2]) : referenceDate.getMonth() + 1;
+
+  if (options?.mode === "board") {
+    const [queue, monthAppointments, settings, operationBoxes] = await Promise.all([
+      listQueueForTodayByTenant(context.tenantId),
+      listAppointmentsForMonthByTenant(context.tenantId, appointmentCalendarYear, appointmentCalendarMonth),
+      getTenantSettings(context.tenantId),
+      listOperationBoxesByTenant(context.tenantId),
+    ]);
+
+    return {
+      tenant: context.tenant,
+      services: [],
+      selectedService: null,
+      customers: [],
+      customersWithHistory: [],
+      customerWorkspace: null,
+      queue,
+      queueActive: queue.filter((item) => item.status === "waiting" || item.status === "washing" || item.status === "finishing"),
+      queueWaiting: queue.filter((item) => item.status === "waiting"),
+      queueReady: queue.filter((item) => item.status === "ready"),
+      employees: [],
+      employeeHistory: [],
+      appointments: [],
+      monthAppointments,
+      appointmentCalendar: {
+        year: appointmentCalendarYear,
+        month: appointmentCalendarMonth,
+        key: `${appointmentCalendarYear}-${String(appointmentCalendarMonth).padStart(2, "0")}`,
+        scheduledCount: monthAppointments.filter((item) => item.status === "scheduled").length,
+      },
+      settings,
+      operationBoxes,
+      vehicleCatalog: { brands: [], models: [], colors: [] },
+      cash: {
+        session: null,
+        entries: [],
+        dailyPayouts: [],
+        totals: {
+          cash: 0,
+          pix: 0,
+          card: 0,
+          pending: 0,
+          income: 0,
+          expenses: 0,
+          gross: 0,
+          net: 0,
+          currentBalance: 0,
+          operationalBalance: 0,
+          openingBalance: 0,
+          dailyPayoutPending: 0,
+          dailyPayoutPaid: 0,
+        },
+        monthEntries: [],
+      },
+    };
+  }
 
   const [services, customers, customersWithHistory, queue, employees, appointments, monthAppointments, cashSession, cashEntries, monthlyCashEntries, settings, operationBoxes, customerWorkspace, vehicleCatalog, activeEmployeeSessions, selectedEmployeeHistory] =
     await Promise.all([

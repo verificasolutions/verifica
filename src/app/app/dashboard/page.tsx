@@ -1893,6 +1893,7 @@ export default async function DashboardPage({
   const inventoryQty = currentSection === "estoque" ? (params.inventoryQty ?? "").trim() : "";
   const stageView = currentSection === "dashboard" ? (params.stageView ?? "").trim() : "";
   const appointmentsMonth = currentSection === "dashboard" ? normalizeAppointmentMonth(params.appointmentsMonth ?? "") : getCurrentMonthKey();
+  const boardOnly = currentSection === "dashboard" && !drawer && !tvMode;
 
   const [dashboard, operations, reports, support, socialStudio, inventoryWorkspace, tenantGrowthWorkspace] = await Promise.all([
     getOwnerDashboardUseCase(),
@@ -1902,8 +1903,9 @@ export default async function DashboardPage({
       selectedServiceId: currentSection === "adm" && admPanel === "services" ? params.service ?? null : null,
       selectedEmployeeId: currentSection === "adm" && admPanel === "employees" ? selectedEmployeeId || null : null,
       appointmentMonth: appointmentsMonth,
+      mode: boardOnly ? "board" : "full",
     }),
-    getReportsUseCase(),
+    currentSection === "adm" && admPanel === "reports" ? getReportsUseCase() : Promise.resolve(null),
     currentSection === "suporte" ? getTenantSupportUseCase() : Promise.resolve(null),
     currentSection === "adm" && admPanel === "social" ? getSocialStudioUseCase() : Promise.resolve(null),
     currentSection === "estoque"
@@ -2954,12 +2956,16 @@ export default async function DashboardPage({
             {admPanel === "reports" ? (
               <SectionShell eyebrow="Relatórios" title="Resumo operacional" description="Visão rápida dos números principais sem sair da área administrativa do tenant.">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <InfoMetric label="Hoje" value={`${reports.today.washes} lavagens`} tone="accent" />
-                  <InfoMetric label="Faturamento" value={reports.today.revenue} />
-                  <InfoMetric label="Ticket médio" value={reports.today.ticket} />
-                  <InfoMetric label="Mais vendido" value={reports.today.topService} />
-                  <InfoMetric label="Semana" value={reports.weekRevenue} />
-                  <InfoMetric label="Mês" value={reports.monthRevenue} />
+                  {reports ? (
+                    <>
+                      <InfoMetric label="Hoje" value={`${reports.today.washes} lavagens`} tone="accent" />
+                      <InfoMetric label="Faturamento" value={reports.today.revenue} />
+                      <InfoMetric label="Ticket médio" value={reports.today.ticket} />
+                      <InfoMetric label="Mais vendido" value={reports.today.topService} />
+                      <InfoMetric label="Semana" value={reports.weekRevenue} />
+                      <InfoMetric label="Mês" value={reports.monthRevenue} />
+                    </>
+                  ) : null}
                 </div>
               </SectionShell>
             ) : null}

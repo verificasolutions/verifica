@@ -18,11 +18,11 @@
   ],
   "crons": [
     {
-      "path": "/api/jobs/return-reminders",
+      "path": "/verifica/api/jobs/return-reminders",
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/jobs/lead-email-sequences",
+      "path": "/verifica/api/jobs/lead-email-sequences",
       "schedule": "0 9 * * *"
     }
   ]

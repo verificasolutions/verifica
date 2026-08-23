@@ -47,43 +47,17 @@ export function RealtimeRefreshBridge({ tenantId, scope }: RealtimeRefreshBridge
       );
     }
 
-    channel.subscribe();
-    const intervalId = window.setInterval(refresh, 5000);
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") return;
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        window.setTimeout(refresh, 1500);
+      }
+    });
 
     return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
       supabase.removeChannel(channel);
     };
   }, [router, scope, tenantId]);
-
-  useEffect(() => {
-    const triggerProcessing = () => {
-      if (document.visibilityState === "hidden") {
-        return;
-      }
-
-      void fetch("/api/jobs/process-messages", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-      }).catch(() => {
-        // The queue will be retried on the next heartbeat.
-      });
-    };
-
-    triggerProcessing();
-    const intervalId = window.setInterval(triggerProcessing, 5000);
-    window.addEventListener("focus", triggerProcessing);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", triggerProcessing);
-    };
-  }, []);
 
   return null;
 }

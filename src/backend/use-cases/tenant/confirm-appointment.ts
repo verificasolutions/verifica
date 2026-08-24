@@ -11,6 +11,7 @@ import {
 } from "@/backend/repos/attendances-operations-repo";
 import { listOperationBoxesByTenant, moveAttendanceToBoxForTenant } from "@/backend/repos/operation-boxes-repo";
 import { listActiveServicesByTenant } from "@/backend/repos/services-repo";
+import { getTenantSettings } from "@/backend/repos/tenant-settings-repo";
 import { formatVehicleDisplayLabel, resolveServiceMinutesByVehicleType, resolveServicePriceByVehicleType } from "@/backend/shared/vehicle-catalog";
 
 export async function confirmAppointmentUseCase(formData: FormData) {
@@ -42,6 +43,7 @@ export async function confirmAppointmentUseCase(formData: FormData) {
   }
 
   const services = await listActiveServicesByTenant(context.tenantId);
+  const settings = await getTenantSettings(context.tenantId);
   const service = services.find((item) => item.id === appointment.service_id);
 
   if (!service) {
@@ -49,8 +51,8 @@ export async function confirmAppointmentUseCase(formData: FormData) {
   }
 
   const effectiveVehicleType = appointment.vehicles?.vehicle_type ?? null;
-  const estimatedMinutes = resolveServiceMinutesByVehicleType(service, effectiveVehicleType);
-  const finalPrice = resolveServicePriceByVehicleType(service, effectiveVehicleType);
+  const estimatedMinutes = resolveServiceMinutesByVehicleType(service, effectiveVehicleType, settings?.vehicle_type_tier_overrides ?? {});
+  const finalPrice = resolveServicePriceByVehicleType(service, effectiveVehicleType, settings?.vehicle_type_tier_overrides ?? {});
 
   const createdAttendance = await createAttendanceForTenant({
     tenantId: context.tenantId,

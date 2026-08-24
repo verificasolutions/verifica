@@ -10,7 +10,7 @@ export async function listActiveServicesByTenant(tenantId: string) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("services")
-    .select("id, tenant_id, name, base_service_id, time_unit, price, price_passeio, price_medio, price_grande, price_bem_grande, minutes_passeio, minutes_medio, minutes_grande, minutes_bem_grande, addon_minutes, addon_minutes_passeio, addon_minutes_medio, addon_minutes_grande, addon_minutes_bem_grande, addon_price_passeio, addon_price_medio, addon_price_grande, addon_price_bem_grande, average_minutes, short_description, kind, is_active, base_service:base_service_id(name)")
+    .select("id, tenant_id, name, base_service_id, time_unit, price, price_passeio, price_medio, price_grande, price_bem_grande, price_app_passeio, price_app_medio, price_app_grande, price_app_bem_grande, minutes_passeio, minutes_medio, minutes_grande, minutes_bem_grande, addon_minutes, addon_minutes_passeio, addon_minutes_medio, addon_minutes_grande, addon_minutes_bem_grande, addon_price_passeio, addon_price_medio, addon_price_grande, addon_price_bem_grande, addon_price_app_passeio, addon_price_app_medio, addon_price_app_grande, addon_price_app_bem_grande, average_minutes, short_description, kind, is_active, base_service:base_service_id(name)")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
@@ -30,6 +30,10 @@ export async function createServiceForTenant(input: {
   priceMedio: number;
   priceGrande: number;
   priceBemGrande: number;
+  priceAppPasseio: number;
+  priceAppMedio: number;
+  priceAppGrande: number;
+  priceAppBemGrande: number;
   minutesPasseio: number;
   minutesMedio: number;
   minutesGrande: number;
@@ -43,6 +47,10 @@ export async function createServiceForTenant(input: {
   addonPriceMedio: number;
   addonPriceGrande: number;
   addonPriceBemGrande: number;
+  addonPriceAppPasseio: number;
+  addonPriceAppMedio: number;
+  addonPriceAppGrande: number;
+  addonPriceAppBemGrande: number;
   averageMinutes: number;
   timeUnit: ServiceRecord["time_unit"];
   shortDescription: string | null;
@@ -58,6 +66,10 @@ export async function createServiceForTenant(input: {
     price_medio: input.priceMedio,
     price_grande: input.priceGrande,
     price_bem_grande: input.priceBemGrande,
+    price_app_passeio: input.priceAppPasseio,
+    price_app_medio: input.priceAppMedio,
+    price_app_grande: input.priceAppGrande,
+    price_app_bem_grande: input.priceAppBemGrande,
     minutes_passeio: input.minutesPasseio,
     minutes_medio: input.minutesMedio,
     minutes_grande: input.minutesGrande,
@@ -71,6 +83,10 @@ export async function createServiceForTenant(input: {
     addon_price_medio: input.addonPriceMedio,
     addon_price_grande: input.addonPriceGrande,
     addon_price_bem_grande: input.addonPriceBemGrande,
+    addon_price_app_passeio: input.addonPriceAppPasseio,
+    addon_price_app_medio: input.addonPriceAppMedio,
+    addon_price_app_grande: input.addonPriceAppGrande,
+    addon_price_app_bem_grande: input.addonPriceAppBemGrande,
     average_minutes: input.averageMinutes,
     short_description: input.shortDescription,
     kind: "main",
@@ -89,6 +105,10 @@ export async function updateServiceForTenant(input: {
   priceMedio: number;
   priceGrande: number;
   priceBemGrande: number;
+  priceAppPasseio: number;
+  priceAppMedio: number;
+  priceAppGrande: number;
+  priceAppBemGrande: number;
   minutesPasseio: number;
   minutesMedio: number;
   minutesGrande: number;
@@ -102,6 +122,10 @@ export async function updateServiceForTenant(input: {
   addonPriceMedio: number;
   addonPriceGrande: number;
   addonPriceBemGrande: number;
+  addonPriceAppPasseio: number;
+  addonPriceAppMedio: number;
+  addonPriceAppGrande: number;
+  addonPriceAppBemGrande: number;
   averageMinutes: number;
   timeUnit: ServiceRecord["time_unit"];
   shortDescription: string | null;
@@ -118,6 +142,10 @@ export async function updateServiceForTenant(input: {
       price_medio: input.priceMedio,
       price_grande: input.priceGrande,
       price_bem_grande: input.priceBemGrande,
+      price_app_passeio: input.priceAppPasseio,
+      price_app_medio: input.priceAppMedio,
+      price_app_grande: input.priceAppGrande,
+      price_app_bem_grande: input.priceAppBemGrande,
       minutes_passeio: input.minutesPasseio,
       minutes_medio: input.minutesMedio,
       minutes_grande: input.minutesGrande,
@@ -131,6 +159,10 @@ export async function updateServiceForTenant(input: {
       addon_price_medio: input.addonPriceMedio,
       addon_price_grande: input.addonPriceGrande,
       addon_price_bem_grande: input.addonPriceBemGrande,
+      addon_price_app_passeio: input.addonPriceAppPasseio,
+      addon_price_app_medio: input.addonPriceAppMedio,
+      addon_price_app_grande: input.addonPriceAppGrande,
+      addon_price_app_bem_grande: input.addonPriceAppBemGrande,
       average_minutes: input.averageMinutes,
       short_description: input.shortDescription,
     })

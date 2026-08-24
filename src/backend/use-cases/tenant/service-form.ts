@@ -25,6 +25,10 @@ export function buildServicePayloadFromForm(formData: FormData, services: Servic
   const addonPriceMedio = isGenericProfile ? addonPricePasseio : parseCurrencyInput(formData.get("price_medio"));
   const addonPriceGrande = isGenericProfile ? addonPricePasseio : parseCurrencyInput(formData.get("price_grande"));
   const addonPriceBemGrande = isGenericProfile ? addonPricePasseio : parseCurrencyInput(formData.get("price_bem_grande"));
+  const addonPriceAppPasseio = parseCurrencyInput(formData.get(isGenericProfile ? "price_app_default" : "price_app_passeio"));
+  const addonPriceAppMedio = isGenericProfile ? addonPriceAppPasseio : parseCurrencyInput(formData.get("price_app_medio"));
+  const addonPriceAppGrande = isGenericProfile ? addonPriceAppPasseio : parseCurrencyInput(formData.get("price_app_grande"));
+  const addonPriceAppBemGrande = isGenericProfile ? addonPriceAppPasseio : parseCurrencyInput(formData.get("price_app_bem_grande"));
 
   if (
     !name ||
@@ -36,6 +40,10 @@ export function buildServicePayloadFromForm(formData: FormData, services: Servic
     !Number.isFinite(addonPriceMedio) ||
     !Number.isFinite(addonPriceGrande) ||
     !Number.isFinite(addonPriceBemGrande)
+    || !Number.isFinite(addonPriceAppPasseio)
+    || !Number.isFinite(addonPriceAppMedio)
+    || !Number.isFinite(addonPriceAppGrande)
+    || !Number.isFinite(addonPriceAppBemGrande)
   ) {
     redirect("/app/dashboard?error=Dados inválidos para serviço.");
   }
@@ -55,6 +63,10 @@ export function buildServicePayloadFromForm(formData: FormData, services: Servic
   const priceMedio = Number(baseService?.price_medio ?? baseService?.price ?? 0) + addonPriceMedio;
   const priceGrande = Number(baseService?.price_grande ?? baseService?.price ?? 0) + addonPriceGrande;
   const priceBemGrande = Number(baseService?.price_bem_grande ?? baseService?.price ?? 0) + addonPriceBemGrande;
+  const priceAppPasseio = Number(baseService?.price_app_passeio ?? baseService?.price_passeio ?? baseService?.price ?? 0) + addonPriceAppPasseio;
+  const priceAppMedio = Number(baseService?.price_app_medio ?? baseService?.price_medio ?? baseService?.price ?? 0) + addonPriceAppMedio;
+  const priceAppGrande = Number(baseService?.price_app_grande ?? baseService?.price_grande ?? baseService?.price ?? 0) + addonPriceAppGrande;
+  const priceAppBemGrande = Number(baseService?.price_app_bem_grande ?? baseService?.price_bem_grande ?? baseService?.price ?? 0) + addonPriceAppBemGrande;
 
   return {
     name,
@@ -64,6 +76,10 @@ export function buildServicePayloadFromForm(formData: FormData, services: Servic
     priceMedio,
     priceGrande,
     priceBemGrande,
+    priceAppPasseio,
+    priceAppMedio,
+    priceAppGrande,
+    priceAppBemGrande,
     minutesPasseio,
     minutesMedio,
     minutesGrande,
@@ -77,6 +93,10 @@ export function buildServicePayloadFromForm(formData: FormData, services: Servic
     addonPriceMedio,
     addonPriceGrande,
     addonPriceBemGrande,
+    addonPriceAppPasseio,
+    addonPriceAppMedio,
+    addonPriceAppGrande,
+    addonPriceAppBemGrande,
     averageMinutes: minutesPasseio,
     timeUnit,
   };

@@ -23,7 +23,7 @@ import { getSaoPauloCalendarDate } from "@/backend/shared/date-range";
 import { formatOperationBoxDurationLabel, formatOperationBoxDurationValue, operationBoxTimeUnitOptions } from "@/backend/shared/operation-box-duration";
 import { listSelectableDestinationBoxes, resolveNextBoxForFlow } from "@/backend/shared/operation-box-flow";
 import { resolveAttendancePrimaryServiceName, resolveAttendanceServiceDisplayName } from "@/backend/shared/attendance-service-summary";
-import { formatVehicleDisplayLabel, resolveServicePriceByVehicleType, VEHICLE_TYPE_OPTIONS } from "@/backend/shared/vehicle-catalog";
+import { formatVehicleDisplayLabel, getVehicleTypeOptions, resolveServicePriceByVehicleType } from "@/backend/shared/vehicle-catalog";
 import { getOperationsDashboardUseCase } from "@/backend/use-cases/tenant/get-operations-dashboard";
 import { getOwnerDashboardUseCase } from "@/backend/use-cases/tenant/get-owner-dashboard";
 import { getReportsUseCase } from "@/backend/use-cases/tenant/get-reports";
@@ -241,12 +241,29 @@ function serviceFormMinutesValue(service: NonNullable<Awaited<ReturnType<typeof 
   return Number(service.minutes_passeio ?? service.average_minutes ?? 0);
 }
 
-function serviceFormPriceValue(service: NonNullable<Awaited<ReturnType<typeof getOperationsDashboardUseCase>>["selectedService"]>, tier: "passeio" | "medio" | "grande" | "bem_grande") {
+function serviceFormPriceValue(
+  service: NonNullable<Awaited<ReturnType<typeof getOperationsDashboardUseCase>>["selectedService"]>,
+  tier: "passeio" | "medio" | "grande" | "bem_grande",
+  table: "particular" | "app" = "particular",
+) {
   if (service.base_service_id) {
+    if (table === "app") {
+      if (tier === "medio") return Number(service.addon_price_app_medio ?? 0);
+      if (tier === "grande") return Number(service.addon_price_app_grande ?? 0);
+      if (tier === "bem_grande") return Number(service.addon_price_app_bem_grande ?? 0);
+      return Number(service.addon_price_app_passeio ?? 0);
+    }
     if (tier === "medio") return Number(service.addon_price_medio ?? 0);
     if (tier === "grande") return Number(service.addon_price_grande ?? 0);
     if (tier === "bem_grande") return Number(service.addon_price_bem_grande ?? 0);
     return Number(service.addon_price_passeio ?? 0);
+  }
+
+  if (table === "app") {
+    if (tier === "medio") return Number(service.price_app_medio ?? service.price_medio ?? service.price ?? 0);
+    if (tier === "grande") return Number(service.price_app_grande ?? service.price_grande ?? service.price ?? 0);
+    if (tier === "bem_grande") return Number(service.price_app_bem_grande ?? service.price_bem_grande ?? service.price ?? 0);
+    return Number(service.price_app_passeio ?? service.price_passeio ?? service.price ?? 0);
   }
 
   if (tier === "medio") return Number(service.price_medio ?? service.price ?? 0);
@@ -1229,6 +1246,7 @@ function NewAttendanceForm({
   operations: Awaited<ReturnType<typeof getOperationsDashboardUseCase>>;
   redirectTo: string;
 }) {
+  const vehicleTypeOptions = getVehicleTypeOptions(operations.settings?.vehicle_type_tier_overrides ?? {});
   return (
     <NewAttendanceFormClient
       formAction={createAttendanceAction}
@@ -1251,7 +1269,7 @@ function NewAttendanceForm({
       brandOptions={operations.vehicleCatalog.brands}
       modelOptions={operations.vehicleCatalog.models}
       colorOptions={operations.vehicleCatalog.colors}
-      vehicleTypeOptions={VEHICLE_TYPE_OPTIONS.map((option) => ({ code: option.code, label: option.label, tier: option.tier }))}
+      vehicleTypeOptions={vehicleTypeOptions.map((option) => ({ code: option.code, label: option.label, tier: option.tier }))}
       operationalProfile={operations.tenant.operational_profile ?? "automotive"}
     />
   );
@@ -1348,6 +1366,7 @@ function DashboardDrawerContent({
 }) {
   if (!drawer) return null;
   const isAutomotiveTenant = (operations.tenant.operational_profile ?? "automotive") === "automotive";
+  const vehicleTypeOptions = getVehicleTypeOptions(operations.settings?.vehicle_type_tier_overrides ?? {});
   const monthKey = normalizeAppointmentMonth(appointmentsMonth ?? operations.appointmentCalendar.key);
 
   if (drawer === "agenda") {
@@ -1369,7 +1388,7 @@ function DashboardDrawerContent({
               brandOptions={operations.vehicleCatalog.brands}
               modelOptions={operations.vehicleCatalog.models}
               colorOptions={operations.vehicleCatalog.colors}
-              vehicleTypeOptions={VEHICLE_TYPE_OPTIONS.map((option) => ({ code: option.code, label: option.label }))}
+              vehicleTypeOptions={vehicleTypeOptions.map((option) => ({ code: option.code, label: option.label }))}
             />
           ) : (
             <div className="space-y-3">
@@ -1601,6 +1620,10 @@ function AppointmentListPanel({
                         price_medio: Number(appointment.services?.price_medio ?? appointment.services?.price ?? 0),
                         price_grande: Number(appointment.services?.price_grande ?? appointment.services?.price ?? 0),
                         price_bem_grande: Number(appointment.services?.price_bem_grande ?? appointment.services?.price ?? 0),
+                        price_app_passeio: Number(appointment.services?.price_passeio ?? appointment.services?.price ?? 0),
+                        price_app_medio: Number(appointment.services?.price_medio ?? appointment.services?.price ?? 0),
+                        price_app_grande: Number(appointment.services?.price_grande ?? appointment.services?.price ?? 0),
+                        price_app_bem_grande: Number(appointment.services?.price_bem_grande ?? appointment.services?.price ?? 0),
                         minutes_passeio: 0,
                         minutes_medio: 0,
                         minutes_grande: 0,
@@ -1614,6 +1637,10 @@ function AppointmentListPanel({
                         addon_price_medio: 0,
                         addon_price_grande: 0,
                         addon_price_bem_grande: 0,
+                        addon_price_app_passeio: 0,
+                        addon_price_app_medio: 0,
+                        addon_price_app_grande: 0,
+                        addon_price_app_bem_grande: 0,
                         average_minutes: 0,
                         short_description: null,
                         kind: "main",
@@ -1621,6 +1648,7 @@ function AppointmentListPanel({
                         base_service: null,
                       },
                       appointment.vehicles?.vehicle_type ?? null,
+                      operations.settings?.vehicle_type_tier_overrides ?? {},
                     ),
                   )}
                 </p>
@@ -1939,6 +1967,7 @@ export default async function DashboardPage({
     currentSection === "caixa" && cashAttendanceId ? operations.queue.find((item) => item.id === cashAttendanceId) ?? null : null;
   const selectedStageDrawer = currentSection === "dashboard" && drawer === "etapa" ? getStageDrawerData(operations, stageView) : null;
   const isAutomotiveTenant = operations.tenant.operational_profile !== "generic";
+  const vehicleTypeOptions = getVehicleTypeOptions(operations.settings?.vehicle_type_tier_overrides ?? {});
   const effectiveCashIdentifierType = selectedCashAttendance ? (isAutomotiveTenant ? "plate" : "customer_name") : cashIdentifierType;
   const effectiveCashIdentifierValue = selectedCashAttendance
     ? isAutomotiveTenant
@@ -3005,39 +3034,45 @@ export default async function DashboardPage({
                       </select>
                       {isAutomotiveTenant ? (
                         <div className="space-y-3 rounded-[22px] border border-white/10 bg-black/12 p-4">
-                          <div className="grid grid-cols-[88px_1fr_1fr] gap-3 text-xs uppercase tracking-[0.2em] text-white/42">
+                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3 text-xs uppercase tracking-[0.16em] text-white/42">
                             <span>Porte</span>
                             <span>Tempo</span>
-                            <span>Valor</span>
+                            <span>Particular</span>
+                            <span>App</span>
                           </div>
-                          <div className="grid grid-cols-[88px_1fr_1fr] gap-3">
-                            <span className="flex items-center text-sm text-white/72">Passeio</span>
+                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
+                            <span className="flex items-center text-sm text-white/72">Pequeno</span>
                             <DurationInput name="minutes_passeio" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "passeio")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_passeio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "passeio")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
+                            <CurrencyInput name="price_app_passeio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "passeio", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[88px_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
                             <span className="flex items-center text-sm text-white/72">Médio</span>
                             <DurationInput name="minutes_medio" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "medio")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_medio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "medio")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
+                            <CurrencyInput name="price_app_medio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "medio", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[88px_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
                             <span className="flex items-center text-sm text-white/72">Grande</span>
                             <DurationInput name="minutes_grande" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "grande")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "grande")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
+                            <CurrencyInput name="price_app_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "grande", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[88px_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
                             <span className="flex items-center text-sm text-white/72">X Grande</span>
                             <DurationInput name="minutes_bem_grande" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "bem_grande")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_bem_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "bem_grande")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
+                            <CurrencyInput name="price_app_bem_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "bem_grande", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-3 rounded-[22px] border border-white/10 bg-black/12 p-4">
                             <div className="grid gap-3 text-xs uppercase tracking-[0.2em] text-white/42 md:grid-cols-2">
                               <span>Tempo padrão</span>
-                              <span>Valor do serviço</span>
+                              <span>Particular</span>
+                              <span>App</span>
                             </div>
-                          <div className="grid gap-3 md:grid-cols-2">
+                          <div className="grid gap-3 md:grid-cols-3">
                             <DurationInput
                               name="minutes_default"
                               defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "passeio")) : undefined}
@@ -3050,10 +3085,16 @@ export default async function DashboardPage({
                               placeholder="R$ 0,00"
                               className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none"
                             />
+                            <CurrencyInput
+                              name="price_app_default"
+                              defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "passeio", "app")) : undefined}
+                              placeholder="R$ 0,00"
+                              className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none"
+                            />
                             <select
                               name="time_unit"
                               defaultValue={editingService?.time_unit ?? "minutes"}
-                              className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none md:col-span-2"
+                              className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none md:col-span-3"
                             >
                               <option value="minutes">Minutos</option>
                               <option value="hours_minutes">Horas e minutos</option>
@@ -3065,7 +3106,7 @@ export default async function DashboardPage({
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
                             {editingService?.base_service_id
                               ? "Neste serviço complementar, informe apenas o tempo e o valor adicionais que serão somados ao serviço base."
-                              : "Neste tenant genérico o serviço usa um único tempo padrão e um único valor. O sistema entende minutos, horas e minutos, dias, semanas e meses."}
+                              : "Neste tenant genérico o serviço usa um único tempo padrão e dois valores: Particular e App. O sistema entende minutos, horas e minutos, dias, semanas e meses."}
                           </div>
                         </div>
                       )}
@@ -3108,20 +3149,19 @@ export default async function DashboardPage({
                             {isAutomotiveTenant ? (
                               <>
                                 <p className="mt-2 text-xs text-white/56">
-                                  Passeio {service.minutes_passeio} min / {formatCurrency(Number(service.price_passeio ?? service.price))}
+                                  Pequeno {service.minutes_passeio} min / Particular {formatCurrency(Number(service.price_passeio ?? service.price))} / App {formatCurrency(Number(service.price_app_passeio ?? service.price_passeio ?? service.price))}
                                 </p>
                                 <p className="mt-1 text-xs text-white/56">
-                                  Médio {service.minutes_medio} min / {formatCurrency(Number(service.price_medio ?? service.price))} • Grande {service.minutes_grande} min /{" "}
-                                  {formatCurrency(Number(service.price_grande ?? service.price))}
+                                  Médio {service.minutes_medio} min / {formatCurrency(Number(service.price_medio ?? service.price))} • Grande {service.minutes_grande} min / {formatCurrency(Number(service.price_grande ?? service.price))}
                                 </p>
                                 <p className="mt-1 text-xs text-white/48">
-                                  X Grande {service.minutes_bem_grande} min / {formatCurrency(Number(service.price_bem_grande ?? service.price))}
+                                  App: Médio {formatCurrency(Number(service.price_app_medio ?? service.price_medio ?? service.price))} • Grande {formatCurrency(Number(service.price_app_grande ?? service.price_grande ?? service.price))} • X Grande {formatCurrency(Number(service.price_app_bem_grande ?? service.price_bem_grande ?? service.price))}
                                   {service.base_service_id ? " • composto" : ""}
                                 </p>
                               </>
                             ) : (
                               <p className="mt-2 text-xs text-white/56">
-                                {serviceTimeLabel(service)} / {formatCurrency(Number(service.price_passeio ?? service.price))}
+                                {serviceTimeLabel(service)} / Particular {formatCurrency(Number(service.price_passeio ?? service.price))} / App {formatCurrency(Number(service.price_app_passeio ?? service.price_passeio ?? service.price))}
                                 {service.base_service_id ? " • complementar" : " • principal"}
                               </p>
                             )}
@@ -3360,6 +3400,28 @@ export default async function DashboardPage({
                       <button className="mt-2 flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-300/45 bg-[linear-gradient(135deg,var(--accent),#7dd3fc)] px-4 text-sm font-semibold text-slate-950 shadow-[0_16px_40px_rgba(34,211,238,0.22)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_52px_rgba(34,211,238,0.32)]">
                         Salvar operação
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="xl:col-span-2 rounded-[24px] border border-white/10 bg-black/15 p-5">
+                    <p className="text-base font-semibold text-white">Classificação dos veículos</p>
+                    <p className="mt-2 text-sm text-white/56">Defina em qual porte cada tipo entra no cálculo de preço. Esta configuração é exclusiva deste tenant.</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {vehicleTypeOptions.map((option) => (
+                        <label key={option.code} className="grid gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">{option.label}</span>
+                          <select
+                            name={`vehicle_tier_${option.code}`}
+                            defaultValue={operations.settings?.vehicle_type_tier_overrides?.[option.code] ?? option.tier}
+                            className="h-11 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none"
+                          >
+                            <option value="passeio">Pequeno</option>
+                            <option value="medio">Médio</option>
+                            <option value="grande">Grande</option>
+                            <option value="bem_grande">X Grande</option>
+                          </select>
+                        </label>
+                      ))}
                     </div>
                   </div>
 
@@ -3995,7 +4057,7 @@ export default async function DashboardPage({
                 brandOptions={operations.vehicleCatalog.brands}
                 modelOptions={operations.vehicleCatalog.models}
                 colorOptions={operations.vehicleCatalog.colors}
-                vehicleTypeOptions={VEHICLE_TYPE_OPTIONS.map((option) => ({ code: option.code, label: option.label }))}
+                vehicleTypeOptions={vehicleTypeOptions.map((option) => ({ code: option.code, label: option.label }))}
               />
             </div>
           </div>

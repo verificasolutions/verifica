@@ -96,6 +96,7 @@ export async function createAttendanceUseCase(formData: FormData) {
   }
 
   const services = await listActiveServicesByTenant(context.tenantId);
+  const settings = await getTenantSettings(context.tenantId);
   const selectedServices = services.filter((item) => selectedServiceIds.includes(item.id));
 
   if (selectedServiceIds.length > 0 && selectedServices.length !== selectedServiceIds.length) {
@@ -234,8 +235,8 @@ export async function createAttendanceUseCase(formData: FormData) {
           ...selectedServices.map((item, index) => ({
             serviceId: item.id,
             name: item.name,
-            estimatedMinutes: resolveServiceMinutesByVehicleType(item, effectiveVehicleType),
-            unitPrice: resolveServicePriceByVehicleType(item, effectiveVehicleType),
+            estimatedMinutes: resolveServiceMinutesByVehicleType(item, effectiveVehicleType, settings?.vehicle_type_tier_overrides ?? {}),
+            unitPrice: resolveServicePriceByVehicleType(item, effectiveVehicleType, settings?.vehicle_type_tier_overrides ?? {}),
             isPrimary: index === 0,
           })),
           ...manualServiceItems.map((name, index) => ({
@@ -290,8 +291,7 @@ export async function createAttendanceUseCase(formData: FormData) {
     redirect(resolveAttendanceErrorTarget(formData, createdServiceItems.error?.message ?? "Falha ao salvar os serviços do atendimento."));
   }
 
-  const [settings, operationBoxes, currentQueue] = await Promise.all([
-    getTenantSettings(context.tenantId),
+  const [operationBoxes, currentQueue] = await Promise.all([
     listOperationBoxesByTenant(context.tenantId),
     listQueueForTodayByTenant(context.tenantId),
   ]);

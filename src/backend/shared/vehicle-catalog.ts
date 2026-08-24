@@ -13,6 +13,7 @@ export type VehicleTypeCode =
   | "bus";
 
 export type VehicleSizeTier = "passeio" | "medio" | "grande" | "bem_grande";
+export type VehicleTierOverrides = Partial<Record<VehicleTypeCode, VehicleSizeTier>>;
 
 export const VEHICLE_TYPE_OPTIONS: Array<{
   code: VehicleTypeCode;
@@ -20,11 +21,11 @@ export const VEHICLE_TYPE_OPTIONS: Array<{
   tier: VehicleSizeTier;
 }> = [
   { code: "hatch", label: "Hatch", tier: "passeio" },
-  { code: "sedan", label: "Sedan", tier: "passeio" },
-  { code: "wagon", label: "Wagon", tier: "passeio" },
-  { code: "pickup_small", label: "Pickup pequena", tier: "passeio" },
-  { code: "suv", label: "SUV", tier: "medio" },
-  { code: "pickup_large", label: "Pickup grande", tier: "medio" },
+  { code: "sedan", label: "Sedan", tier: "medio" },
+  { code: "wagon", label: "Perua / Wagon", tier: "medio" },
+  { code: "pickup_small", label: "Pickup pequena", tier: "grande" },
+  { code: "suv", label: "SUV", tier: "grande" },
+  { code: "pickup_large", label: "Pickup grande", tier: "grande" },
   { code: "van", label: "Van", tier: "grande" },
   { code: "micro_bus", label: "Micro-ônibus", tier: "grande" },
   { code: "truck", label: "Caminhão", tier: "bem_grande" },
@@ -111,6 +112,17 @@ export function getVehicleTypeMeta(vehicleType: string | null | undefined) {
   return VEHICLE_TYPE_OPTIONS.find((item) => item.code === vehicleType) ?? null;
 }
 
+export function getVehicleTypeOptions(overrides: VehicleTierOverrides = {}) {
+  return VEHICLE_TYPE_OPTIONS.map((option) => ({ ...option, tier: overrides[option.code] ?? option.tier }));
+}
+
+export function getVehicleSizeTierLabel(tier: VehicleSizeTier) {
+  if (tier === "passeio") return "Pequeno";
+  if (tier === "medio") return "Médio";
+  if (tier === "grande") return "Grande";
+  return "X Grande";
+}
+
 export function getVehicleLabelByType(vehicleType: string | null | undefined) {
   return getVehicleTypeMeta(vehicleType)?.label ?? "Veículo";
 }
@@ -155,8 +167,20 @@ export function formatVehicleDisplayLabel(input: {
   return getVehicleLabelByType(input.vehicleType);
 }
 
-export function resolveServicePriceByVehicleType(service: ServiceRecord, vehicleType: string | null | undefined) {
-  const tier = getVehicleTypeMeta(vehicleType)?.tier ?? "passeio";
+export function resolveServicePriceByVehicleType(
+  service: ServiceRecord,
+  vehicleType: string | null | undefined,
+  overrides: VehicleTierOverrides = {},
+  priceTable: "particular" | "app" = "particular",
+) {
+  const tier = overrides[String(vehicleType) as VehicleTypeCode] ?? getVehicleTypeMeta(vehicleType)?.tier ?? "passeio";
+
+  if (priceTable === "app") {
+    if (tier === "medio") return Number(service.price_app_medio ?? service.price_medio ?? service.price);
+    if (tier === "grande") return Number(service.price_app_grande ?? service.price_grande ?? service.price);
+    if (tier === "bem_grande") return Number(service.price_app_bem_grande ?? service.price_bem_grande ?? service.price);
+    return Number(service.price_app_passeio ?? service.price_passeio ?? service.price);
+  }
 
   if (tier === "medio") return Number(service.price_medio ?? service.price);
   if (tier === "grande") return Number(service.price_grande ?? service.price);
@@ -165,8 +189,8 @@ export function resolveServicePriceByVehicleType(service: ServiceRecord, vehicle
   return Number(service.price_passeio ?? service.price);
 }
 
-export function resolveServiceMinutesByVehicleType(service: ServiceRecord, vehicleType: string | null | undefined) {
-  const tier = getVehicleTypeMeta(vehicleType)?.tier ?? "passeio";
+export function resolveServiceMinutesByVehicleType(service: ServiceRecord, vehicleType: string | null | undefined, overrides: VehicleTierOverrides = {}) {
+  const tier = overrides[String(vehicleType) as VehicleTypeCode] ?? getVehicleTypeMeta(vehicleType)?.tier ?? "passeio";
 
   if (tier === "medio") return Number(service.minutes_medio ?? service.average_minutes);
   if (tier === "grande") return Number(service.minutes_grande ?? service.average_minutes);

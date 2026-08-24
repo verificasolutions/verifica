@@ -50,6 +50,10 @@ export type ServiceRecord = {
   price_medio: number;
   price_grande: number;
   price_bem_grande: number;
+  price_app_passeio: number;
+  price_app_medio: number;
+  price_app_grande: number;
+  price_app_bem_grande: number;
   minutes_passeio: number;
   minutes_medio: number;
   minutes_grande: number;
@@ -63,6 +67,10 @@ export type ServiceRecord = {
   addon_price_medio: number;
   addon_price_grande: number;
   addon_price_bem_grande: number;
+  addon_price_app_passeio: number;
+  addon_price_app_medio: number;
+  addon_price_app_grande: number;
+  addon_price_app_bem_grande: number;
   average_minutes: number;
   short_description: string | null;
   kind: "main" | "extra";
@@ -360,6 +368,7 @@ export type TenantSettingsRecord = {
   instagram_auto_publish_enabled: boolean;
   instagram_default_publish_mode: "manual";
   logout_before: string | null;
+  vehicle_type_tier_overrides?: Partial<Record<"hatch" | "sedan" | "wagon" | "pickup_small" | "suv" | "pickup_large" | "van" | "micro_bus" | "truck" | "bus", "passeio" | "medio" | "grande" | "bem_grande">>;
 };
 
 export type TenantInstagramAccountRecord = {

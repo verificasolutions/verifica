@@ -13,6 +13,10 @@ export async function saveTenantSettingsUseCase(formData: FormData) {
   const defaultMinutesValue = defaultMinutesText ? Number(defaultMinutesText) : Number.NaN;
   const messagingUnlocked = current?.customer_messages_enabled ?? false;
   const fallbackTarget = "/app/dashboard?section=adm&panel=settings";
+  const vehicleTypeCodes = ["hatch", "sedan", "wagon", "pickup_small", "suv", "pickup_large", "van", "micro_bus", "truck", "bus"] as const;
+  const vehicle_type_tier_overrides = Object.fromEntries(
+    vehicleTypeCodes.map((code) => [code, String(formData.get(`vehicle_tier_${code}`) ?? current?.vehicle_type_tier_overrides?.[code] ?? "passeio")]),
+  );
 
   const error = await upsertTenantSettings({
     tenant_id: context.tenantId,
@@ -51,6 +55,7 @@ export async function saveTenantSettingsUseCase(formData: FormData) {
     instagram_auto_publish_enabled: current?.instagram_auto_publish_enabled ?? false,
     instagram_default_publish_mode: current?.instagram_default_publish_mode ?? "manual",
     logout_before: current?.logout_before ?? null,
+    vehicle_type_tier_overrides,
   });
 
   if (error) {

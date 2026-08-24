@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthSubmitButton } from "@/components/auth-submit-button";
 import { BusinessHoursField } from "@/components/business-hours-field";
 import { LandingPageForm } from "@/components/landing-page-form";
+import { getAppUrl } from "@/backend/shared/app-url";
 import { getLandingWorkspaceUseCase } from "@/backend/use-cases/tenant/get-landing-workspace";
 import { deleteLandingReviewAction, saveLandingReviewAction } from "./actions";
 
@@ -26,7 +27,7 @@ export default async function LandingWorkspacePage({
   const message = typeof params.message === "string" ? params.message : "";
   const error = typeof params.error === "string" ? params.error : "";
   const publicPath = formatPublicPath(workspace.tenant.slug);
-  const publicUrl = publicPath ? `https://www.verificasolutions.com.br${publicPath}` : null;
+  const publicUrl = publicPath ? `${getAppUrl()}${publicPath.replace(/^\/verifica/, "")}` : null;
   const landingUnlocked = workspace.settings?.landing_enabled ?? false;
   const whatsappLink = normalizeWhatsappLink(
     workspace.companyProfile?.phone ?? workspace.companyProfile?.phone_secondary ?? workspace.tenant.whatsapp,

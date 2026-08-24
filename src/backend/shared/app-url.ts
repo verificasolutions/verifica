@@ -18,7 +18,7 @@ export function getAppUrl() {
     return `https://${preview.replace(/^https?:\/\//, "").replace(/\/+$/, "")}${APP_BASE_PATH}`;
   }
 
-  return `https://www.verificasolutions.com.br${APP_BASE_PATH}`;
+  return `https://verifica-saas.vercel.app${APP_BASE_PATH}`;
 }
 
 export function getAppBasePath() {

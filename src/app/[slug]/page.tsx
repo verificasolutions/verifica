@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TenantPublicSite, buildTenantPublicMetadata, getTenantPublicSite } from "@/components/tenant-public-site";
+import { getAppUrl } from "@/backend/shared/app-url";
 
-const PUBLIC_ORIGIN = "https://www.verificasolutions.com.br/verifica";
+const PUBLIC_ORIGIN = getAppUrl();
 
 export async function generateMetadata({
   params,

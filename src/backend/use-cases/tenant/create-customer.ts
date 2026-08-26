@@ -76,6 +76,8 @@ export async function createCustomerUseCase(formData: FormData) {
     state: normalizeText(formData.get("state")),
     contactPhone1,
     contactPhone2,
+    gender: normalizeText(formData.get("gender")),
+    birthDate: normalizeText(formData.get("birth_date")),
     isFleet,
   });
 

@@ -292,6 +292,8 @@ export async function updateCustomerForTenant(input: {
   state?: string | null;
   contactPhone1?: string | null;
   contactPhone2?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
   isFleet?: boolean;
 }) {
   const supabase = await createSupabaseServerClient();
@@ -315,6 +317,8 @@ export async function updateCustomerForTenant(input: {
   if (input.state !== undefined) patch.state = input.state;
   if (input.contactPhone1 !== undefined) patch.contact_phone_1 = input.contactPhone1;
   if (input.contactPhone2 !== undefined) patch.contact_phone_2 = input.contactPhone2;
+  if (input.gender !== undefined) patch.gender = input.gender;
+  if (input.birthDate !== undefined) patch.birth_date = input.birthDate;
   if (input.isFleet !== undefined) patch.is_fleet = input.isFleet;
   if (input.whatsapp !== undefined || input.contactPhone1 !== undefined) {
     patch.phone_normalized = normalizeNationalPhone(input.whatsapp ?? input.contactPhone1 ?? null) || null;
@@ -351,6 +355,8 @@ export async function createCustomerForTenant(input: {
   state?: string | null;
   contactPhone1?: string | null;
   contactPhone2?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
   isFleet?: boolean;
 }) {
   const supabase = await createSupabaseServerClient();
@@ -377,6 +383,8 @@ export async function createCustomerForTenant(input: {
       state: input.state ?? null,
       contact_phone_1: input.contactPhone1 ?? null,
       contact_phone_2: input.contactPhone2 ?? null,
+      ...(input.gender ? { gender: input.gender } : {}),
+      ...(input.birthDate ? { birth_date: input.birthDate } : {}),
       is_fleet: input.isFleet ?? false,
       is_active: true,
     })

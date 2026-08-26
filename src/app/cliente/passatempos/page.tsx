@@ -1,0 +1,9 @@
+import Link from "next/link";
+import { requireCustomer } from "@/backend/auth/guards";
+import { getPublicTenantSiteCritical } from "@/backend/repos/public-tenant-site-repo";
+
+export default async function PassatemposPage() {
+  const { customer } = await requireCustomer();
+  const site = customer.tenantSlug ? await getPublicTenantSiteCritical(customer.tenantSlug) : null;
+  return <main className="relative isolate mx-auto min-h-[100dvh] w-full max-w-md space-y-4 overflow-hidden px-4 py-6">{site?.landing?.cover_image_url ? <div aria-hidden="true" className="customer-portal-banner pointer-events-none fixed inset-0 -z-10 bg-cover bg-center" style={{ backgroundImage: `linear-gradient(rgba(13,17,23,.76),rgba(13,17,23,.94)),url(${JSON.stringify(site.landing.cover_image_url)})` }} /> : null}<Link href="/cliente/portal" className="text-sm font-medium text-[color:var(--text-secondary)]">← Voltar</Link><p className="text-xs uppercase tracking-[0.22em] text-[color:var(--accent)]">Área do cliente</p><h1 className="text-2xl font-bold text-[color:var(--text-primary)]">Passatempo</h1><section className="rounded-3xl border border-[color:var(--surface-border)] bg-[color:var(--card)] p-5"><p className="text-sm text-[color:var(--text-secondary)]">Escolha uma experiência enquanto aguarda seu atendimento.</p><div className="mt-4 grid gap-2"><button disabled className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] text-sm text-[color:var(--text-muted)]">Jogos clássicos · em breve</button><button disabled className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] text-sm text-[color:var(--text-muted)]">Quiz · em breve</button><button disabled className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] text-sm text-[color:var(--text-muted)]">Curiosidades · em breve</button></div></section></main>;
+}

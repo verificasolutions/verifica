@@ -33,7 +33,7 @@ import { getInventoryWorkspaceUseCase } from "@/backend/use-cases/tenant/get-inv
 import { getTenantSupportUseCase } from "@/backend/use-cases/tenant/get-tenant-support";
 import { getTenantGrowthWorkspaceUseCase } from "@/backend/use-cases/tenant/get-tenant-growth-workspace";
 import { getSocialStudioUseCase } from "@/backend/use-cases/tenant/get-social-studio";
-import { buildBusinessIntelligence } from "@/backend/shared/business-intelligence";
+import { getBusinessIntelligenceUseCase, type IntelligencePeriod } from "@/backend/use-cases/tenant/get-business-intelligence";
 import {
   approveServiceQuoteAction,
   cancelAppointmentAction,
@@ -1944,6 +1944,7 @@ export default async function DashboardPage({
     cashDrawer?: string;
     cashPeriod?: string;
     intelligenceView?: string;
+    intelligencePeriod?: string;
     customer?: string;
     customerForm?: string;
     quoteForm?: string;
@@ -1974,6 +1975,7 @@ export default async function DashboardPage({
   const cashDrawer = (["entries", "expenses", "monthly"].includes(params.cashDrawer ?? "") ? params.cashDrawer : null) as CashDrawer | null;
   const cashPeriod = (["day", "week", "fortnight", "month", "year"].includes(params.cashPeriod ?? "") ? params.cashPeriod : "day") as CashPeriod;
   const intelligenceView = (["overview", "performance", "flow", "services", "vehicles", "customers", "employees", "finance", "payments", "forecast", "copilot"].includes(params.intelligenceView ?? "") ? params.intelligenceView : "overview") as IntelligenceView;
+  const intelligencePeriod = (["today", "7d", "14d", "30d", "month", "previous_month", "3m"].includes(params.intelligencePeriod ?? "") ? params.intelligencePeriod : "30d") as IntelligencePeriod;
   const admPanel = (["reports", "services", "employees", "settings", "whatsapp", "social"].includes(params.panel ?? "")
     ? params.panel
     : "reports") as AdmPanel;
@@ -2049,11 +2051,7 @@ export default async function DashboardPage({
     currentSection === "caixa" && cashAttendanceId ? operations.queue.find((item) => item.id === cashAttendanceId) ?? null : null;
   const selectedStageDrawer = currentSection === "dashboard" && drawer === "etapa" ? getStageDrawerData(operations, stageView) : null;
   const isAutomotiveTenant = operations.tenant.operational_profile !== "generic";
-  const intelligenceModel = buildBusinessIntelligence({
-    cashEntries: operations.cash.entries,
-    attendances: operations.queue,
-    periodLabel: cashPeriod === "day" ? "Hoje" : cashPeriod === "week" ? "Esta semana" : cashPeriod === "fortnight" ? "Últimos 15 dias" : cashPeriod === "month" ? "Este mês" : "Este ano",
-  });
+  const intelligence = currentSection === "inteligencia" ? await getBusinessIntelligenceUseCase(intelligencePeriod) : null;
   const vehicleTypeOptions = getVehicleTypeOptions(operations.settings?.vehicle_type_tier_overrides ?? {});
   const effectiveCashIdentifierType = selectedCashAttendance ? (isAutomotiveTenant ? "plate" : "customer_name") : cashIdentifierType;
   const effectiveCashIdentifierValue = selectedCashAttendance
@@ -2623,7 +2621,7 @@ export default async function DashboardPage({
 
         {currentSection === "inteligencia" ? (
           <SectionShell eyebrow="Central de inteligência" title="Inteligência do negócio" description="Dados reais transformados em contexto para apoiar decisões. O Grid operacional continua separado e inalterado.">
-            <BusinessIntelligenceSection model={intelligenceModel} view={intelligenceView} />
+            {intelligence ? <BusinessIntelligenceSection model={intelligence} view={intelligenceView} period={intelligencePeriod} /> : null}
           </SectionShell>
         ) : null}
 

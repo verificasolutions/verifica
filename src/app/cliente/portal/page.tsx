@@ -65,6 +65,10 @@ export default async function PortalHomePage({ searchParams }: { searchParams: S
 
       <div className="flex justify-end"><ThemeToggle /></div>
 
+      <Link href="/cliente/passatempos" className="flex min-h-11 items-center justify-center rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] text-sm font-semibold text-[color:var(--text-primary)]">
+        Passatempo
+      </Link>
+
       {list.length === 0 ? (
         <section className="rounded-3xl border border-dashed border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] p-6 text-center">
           <p className="text-sm text-[color:var(--text-muted)]">Nenhum veículo vinculado ainda.</p>

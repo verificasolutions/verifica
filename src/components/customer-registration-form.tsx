@@ -119,6 +119,8 @@ export function CustomerRegistrationForm({
     if (digits.length !== 8) return;
 
     let cancelled = false;
+    // CEP lookup synchronizes remote address data with the form fields.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingAddress(true);
 
     fetch(`https://viacep.com.br/ws/${digits}/json/`)
@@ -259,6 +261,14 @@ export function CustomerRegistrationForm({
         <FieldLabel>Inscrição municipal</FieldLabel>
         <input name="municipal_registration" placeholder="Inscrição municipal" className="h-14 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
       </div>
+
+      <details className="rounded-[24px] border border-white/10 bg-black/15 p-5">
+        <summary className="cursor-pointer text-sm font-semibold text-white">Dados complementares (opcionais)</summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div><FieldLabel>Gênero</FieldLabel><select name="gender" className="h-14 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none"><option value="">Não informado</option><option value="female">Feminino</option><option value="male">Masculino</option><option value="non_binary">Não binário</option><option value="other">Outro</option></select></div>
+          <div><FieldLabel>Data de nascimento</FieldLabel><input name="birth_date" type="date" className="h-14 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" /></div>
+        </div>
+      </details>
 
       {isAutomotive ? (
         <div className="rounded-[24px] border border-white/10 bg-black/15 p-5">

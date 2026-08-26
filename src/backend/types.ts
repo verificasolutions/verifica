@@ -100,6 +100,8 @@ export type CustomerRecord = {
   state?: string | null;
   contact_phone_1?: string | null;
   contact_phone_2?: string | null;
+  gender?: string | null;
+  birth_date?: string | null;
   is_fleet?: boolean;
   is_active: boolean;
   last_return_reminder_sent_at?: string | null;

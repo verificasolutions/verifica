@@ -6,7 +6,7 @@ import { createAppointmentDraftUseCase, confirmAppointmentUseCase } from "@/back
 
 function flowUrl(params: Record<string, string>) {
   const search = new URLSearchParams(params);
-  return `/cliente/agendar?${search.toString()}`;
+  return `/verifica/cliente/agendar?${search.toString()}`;
 }
 
 export async function createAppointmentDraftAction(formData: FormData) {

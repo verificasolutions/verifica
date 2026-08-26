@@ -7,7 +7,7 @@ import { confirmOrderUseCase } from "@/backend/use-cases/customer/confirm-order"
 
 function flowUrl(params: Record<string, string>) {
   const search = new URLSearchParams(params);
-  return `/cliente/lavar-agora?${search.toString()}`;
+  return `/verifica/cliente/lavar-agora?${search.toString()}`;
 }
 
 export async function createOrderDraftAction(formData: FormData) {

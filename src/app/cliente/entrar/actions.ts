@@ -14,7 +14,7 @@ const ENTRY_TOKEN_COOKIE = "vw_entry_token";
 /** Monta a URL do passo com URLSearchParams (que já codifica). NUNCA pré-codificar. */
 function entryUrl(params: Record<string, string>) {
   const search = new URLSearchParams(params);
-  return `/cliente/entrar?${search.toString()}`;
+  return `/verifica/cliente/entrar?${search.toString()}`;
 }
 
 /** redirect() do Next lança NEXT_REDIRECT — nunca tratar como erro de fluxo. */
@@ -124,7 +124,7 @@ export async function loginAction(formData: FormData) {
 
     await setCustomerSessionCookie(result.data.token, result.data.expiresAt);
     cookieStore.delete(ENTRY_TOKEN_COOKIE);
-    redirect("/cliente/portal");
+    redirect("/verifica/cliente/portal");
   } catch (error) {
     if (isNextRedirect(error)) throw error;
     redirect(entryUrl({ tenant: slug, step: "3", mode, phone, plate, error: friendlyError(error) }));
@@ -163,7 +163,7 @@ export async function registerAction(formData: FormData) {
 
     await setCustomerSessionCookie(result.data.token, result.data.expiresAt);
     cookieStore.delete(ENTRY_TOKEN_COOKIE);
-    redirect("/cliente/portal");
+    redirect("/verifica/cliente/portal");
   } catch (error) {
     if (isNextRedirect(error)) throw error;
     redirect(entryUrl({ tenant: slug, step: "3", mode, vehicle, phone, plate, error: friendlyError(error) }));

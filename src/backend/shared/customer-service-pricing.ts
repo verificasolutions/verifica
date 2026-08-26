@@ -8,8 +8,8 @@ function pick(values: Array<number | null | undefined>) {
 
 function defaultTier(vehicleType: string | null | undefined) {
   if (vehicleType === "sedan" || vehicleType === "wagon") return "medio";
-  if (["pickup_small", "suv", "pickup_large", "van", "micro_bus"].includes(vehicleType ?? "")) return "grande";
-  if (["truck", "bus"].includes(vehicleType ?? "")) return "bem_grande";
+  if (["pickup_small", "suv", "pickup_large"].includes(vehicleType ?? "")) return "grande";
+  if (["van", "micro_bus", "truck", "bus"].includes(vehicleType ?? "")) return "bem_grande";
   return "passeio";
 }
 

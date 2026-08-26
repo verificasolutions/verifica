@@ -26,8 +26,8 @@ export const VEHICLE_TYPE_OPTIONS: Array<{
   { code: "pickup_small", label: "Pickup pequena", tier: "grande" },
   { code: "suv", label: "SUV", tier: "grande" },
   { code: "pickup_large", label: "Pickup grande", tier: "grande" },
-  { code: "van", label: "Van", tier: "grande" },
-  { code: "micro_bus", label: "Micro-ônibus", tier: "grande" },
+  { code: "van", label: "Van", tier: "bem_grande" },
+  { code: "micro_bus", label: "Micro-ônibus", tier: "bem_grande" },
   { code: "truck", label: "Caminhão", tier: "bem_grande" },
   { code: "bus", label: "Ônibus", tier: "bem_grande" },
 ];

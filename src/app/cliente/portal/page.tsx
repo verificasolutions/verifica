@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/cliente/submit-button";
 import { FlashNotice } from "@/components/flash-notice";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getPublicTenantSiteCritical } from "@/backend/repos/public-tenant-site-repo";
+import { VehicleAutocompleteFields } from "@/components/cliente/vehicle-autocomplete-fields";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -32,7 +33,6 @@ export default async function PortalHomePage({ searchParams }: { searchParams: S
   const model = String(params.model ?? "");
   const color = String(params.color ?? "");
   const vehicleType = String(params.vehicle_type ?? "");
-  const sizeTier = String(params.size_tier ?? "");
 
   return (
     <main className="relative isolate mx-auto min-h-[100dvh] w-full max-w-md space-y-4 overflow-hidden px-4 py-6">
@@ -132,15 +132,7 @@ export default async function PortalHomePage({ searchParams }: { searchParams: S
               placeholder="Placa"
               className="min-h-11 w-full rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 uppercase outline-none focus:border-[var(--accent)]"
             />
-            <div className="grid grid-cols-2 gap-2">
-              <input name="brand" defaultValue={brand} placeholder="Marca" className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 outline-none" />
-              <input name="model" defaultValue={model} placeholder="Modelo" className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 outline-none" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input name="color" defaultValue={color} placeholder="Cor" className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 outline-none" />
-              <input name="vehicle_type" defaultValue={vehicleType} placeholder="Tipo (hatch, sedan...)" className="min-h-11 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 outline-none" />
-            </div>
-            <input name="size_tier" defaultValue={sizeTier} placeholder="Porte (passeio, medio, grande, bem_grande)" className="min-h-11 w-full rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 outline-none" />
+            <VehicleAutocompleteFields brand={brand} model={model} color={color} vehicleType={vehicleType} />
             <SubmitButton>Vincular</SubmitButton>
           </form>
         ) : (

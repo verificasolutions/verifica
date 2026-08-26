@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from "react";
 import Link from "next/link";
 import { CashExpenseForm } from "@/components/cash-expense-form";
+import { CashReceiptForm } from "@/components/cash-receipt-form";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CustomerRegistrationForm } from "@/components/customer-registration-form";
 import { EmployeeAddressFields } from "@/components/employee-address-fields";
@@ -414,6 +415,7 @@ function cashHrefForAttendance(
   },
 ) {
   return hrefFor("caixa", {
+    cashDrawer: "entries",
     service: resolveAttendanceServiceDisplayName(attendance),
     attendanceId: attendance.id,
     cashIdentifierType: options?.identifierType ?? "plate",
@@ -1731,9 +1733,19 @@ function AppointmentsSection({ operations }: { operations: Awaited<ReturnType<ty
 function CashDrawerContent({
   drawer,
   operations,
+  initialAmount,
+  initialService,
+  initialDescription,
+  initialAttendanceId,
+  redirectTo,
 }: {
   drawer: CashDrawer | null;
   operations: Awaited<ReturnType<typeof getOperationsDashboardUseCase>>;
+  initialAmount?: string;
+  initialService?: string;
+  initialDescription?: string;
+  initialAttendanceId?: string;
+  redirectTo: string;
 }) {
   if (!drawer) return null;
 
@@ -1753,27 +1765,15 @@ function CashDrawerContent({
     return (
       <div className="space-y-4">
         <p className="text-sm text-white/58">Registre um recebimento ou consulte os recebimentos do período selecionado.</p>
-        <form action={createCashEntryAction} className="space-y-3 rounded-[22px] border border-emerald-400/14 bg-emerald-400/6 p-4">
-          <input type="hidden" name="redirect_to" value="/app/dashboard?section=caixa" />
-          <input type="hidden" name="kind" value="income" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <select name="entry_category" defaultValue="service" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none">
-              <option value="service">Serviço</option>
-              <option value="addon">Adicional</option>
-              <option value="extra">Extra</option>
-              <option value="other_income">Outra entrada</option>
-            </select>
-            <select name="payment_method" defaultValue="cash" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none">
-              <option value="cash">Dinheiro</option>
-              <option value="pix">Pix</option>
-              <option value="card">Cartão</option>
-              <option value="pending">Pendente</option>
-            </select>
-            <CurrencyInput name="amount" placeholder="R$ 0,00" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none" />
-            <input name="item_name" placeholder="Descrição do recebimento" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none" />
-          </div>
-          <button className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-emerald-300 px-4 text-sm font-semibold text-slate-950">Lançar recebimento</button>
-        </form>
+        <CashReceiptForm
+          formAction={createCashEntryAction}
+          redirectTo={redirectTo}
+          services={operations.services.map((service) => ({ id: service.id, name: service.name, price: Number(service.price_passeio ?? service.price ?? 0) }))}
+          initialAmount={initialAmount}
+          initialService={initialService}
+          initialDescription={initialDescription}
+          initialAttendanceId={initialAttendanceId}
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           {channelGroups.map((group) => (
             <div key={group.label} className="rounded-[20px] border border-emerald-400/14 bg-emerald-400/6 p-4">
@@ -3994,7 +3994,15 @@ export default async function DashboardPage({
           subtitle="Caixa"
           closeHref={hrefFor("caixa")}
         >
-          <CashDrawerContent drawer={cashDrawer} operations={operations} />
+          <CashDrawerContent
+            drawer={cashDrawer}
+            operations={operations}
+            initialAmount={effectiveCashAmount}
+            initialService={effectiveCashService}
+            initialDescription={effectiveCashDescription}
+            initialAttendanceId={cashAttendanceId}
+            redirectTo={hrefFor("caixa", { cashPeriod })}
+          />
         </DrawerShell>
       ) : null}
 

@@ -20,6 +20,7 @@ import { TenantMessageSettings } from "@/components/tenant-message-settings";
 import { TenantGrowthSection } from "@/components/tenant-growth-section";
 import { TenantSidebar } from "@/components/tenant-sidebar";
 import { VehicleIdentityFields } from "@/components/vehicle-identity-fields";
+import { BusinessIntelligenceSection } from "@/components/business-intelligence-section";
 import { getSaoPauloCalendarDate } from "@/backend/shared/date-range";
 import { formatOperationBoxDurationLabel, formatOperationBoxDurationValue, operationBoxTimeUnitOptions } from "@/backend/shared/operation-box-duration";
 import { listSelectableDestinationBoxes, resolveNextBoxForFlow } from "@/backend/shared/operation-box-flow";
@@ -32,6 +33,7 @@ import { getInventoryWorkspaceUseCase } from "@/backend/use-cases/tenant/get-inv
 import { getTenantSupportUseCase } from "@/backend/use-cases/tenant/get-tenant-support";
 import { getTenantGrowthWorkspaceUseCase } from "@/backend/use-cases/tenant/get-tenant-growth-workspace";
 import { getSocialStudioUseCase } from "@/backend/use-cases/tenant/get-social-studio";
+import { buildBusinessIntelligence } from "@/backend/shared/business-intelligence";
 import {
   approveServiceQuoteAction,
   cancelAppointmentAction,
@@ -74,6 +76,7 @@ type DashboardDrawer = "agenda" | "agendar" | "agendamentos" | "resumo" | "fila"
 type CashDrawer = "entries" | "expenses" | "monthly";
 type CashPeriod = "day" | "week" | "fortnight" | "month" | "year";
 type AdmPanel = "reports" | "services" | "employees" | "settings" | "whatsapp" | "social";
+type IntelligenceView = "overview" | "performance" | "flow" | "services" | "vehicles" | "customers" | "employees" | "finance" | "payments" | "forecast" | "copilot";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -377,6 +380,7 @@ function hrefFor(
     cashDelivery?: boolean;
     stageView?: string | null;
     appointmentsMonth?: string | null;
+    intelligenceView?: IntelligenceView | null;
   },
 ) {
   const params = new URLSearchParams({ section });
@@ -401,6 +405,7 @@ function hrefFor(
   if (options?.cashDelivery) params.set("cashDelivery", "1");
   if (options?.stageView) params.set("stageView", options.stageView);
   if (options?.appointmentsMonth) params.set("appointmentsMonth", options.appointmentsMonth);
+  if (options?.intelligenceView) params.set("intelligenceView", options.intelligenceView);
 
   return `/app/dashboard?${params.toString()}`;
 }
@@ -1938,6 +1943,7 @@ export default async function DashboardPage({
     panel?: string;
     cashDrawer?: string;
     cashPeriod?: string;
+    intelligenceView?: string;
     customer?: string;
     customerForm?: string;
     quoteForm?: string;
@@ -1967,6 +1973,7 @@ export default async function DashboardPage({
   const drawer = (["agenda", "agendar", "agendamentos", "resumo", "fila", "prontos", "novo", "etapa"].includes(params.drawer ?? "") ? params.drawer : null) as DashboardDrawer | null;
   const cashDrawer = (["entries", "expenses", "monthly"].includes(params.cashDrawer ?? "") ? params.cashDrawer : null) as CashDrawer | null;
   const cashPeriod = (["day", "week", "fortnight", "month", "year"].includes(params.cashPeriod ?? "") ? params.cashPeriod : "day") as CashPeriod;
+  const intelligenceView = (["overview", "performance", "flow", "services", "vehicles", "customers", "employees", "finance", "payments", "forecast", "copilot"].includes(params.intelligenceView ?? "") ? params.intelligenceView : "overview") as IntelligenceView;
   const admPanel = (["reports", "services", "employees", "settings", "whatsapp", "social"].includes(params.panel ?? "")
     ? params.panel
     : "reports") as AdmPanel;
@@ -2042,6 +2049,11 @@ export default async function DashboardPage({
     currentSection === "caixa" && cashAttendanceId ? operations.queue.find((item) => item.id === cashAttendanceId) ?? null : null;
   const selectedStageDrawer = currentSection === "dashboard" && drawer === "etapa" ? getStageDrawerData(operations, stageView) : null;
   const isAutomotiveTenant = operations.tenant.operational_profile !== "generic";
+  const intelligenceModel = buildBusinessIntelligence({
+    cashEntries: operations.cash.entries,
+    attendances: operations.queue,
+    periodLabel: cashPeriod === "day" ? "Hoje" : cashPeriod === "week" ? "Esta semana" : cashPeriod === "fortnight" ? "Últimos 15 dias" : cashPeriod === "month" ? "Este mês" : "Este ano",
+  });
   const vehicleTypeOptions = getVehicleTypeOptions(operations.settings?.vehicle_type_tier_overrides ?? {});
   const effectiveCashIdentifierType = selectedCashAttendance ? (isAutomotiveTenant ? "plate" : "customer_name") : cashIdentifierType;
   const effectiveCashIdentifierValue = selectedCashAttendance
@@ -2610,16 +2622,8 @@ export default async function DashboardPage({
         {currentSection === "estoque" && inventoryWorkspace ? <InventorySection inventory={inventoryWorkspace} /> : null}
 
         {currentSection === "inteligencia" ? (
-          <SectionShell eyebrow="Inteligência" title="Visão financeira" description="Transforme os lançamentos em decisões práticas para o negócio.">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <CashInsightBars title="Receita por origem" items={operations.cash.insights?.incomeByCategory ?? []} tone="income" />
-              <CashInsightBars title="Custos por categoria" items={operations.cash.insights?.expenseByCategory ?? []} tone="expense" />
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <InfoMetric label="Receita no período" value={formatCurrency(operations.cash.totals.income)} tone="accent" />
-              <InfoMetric label="Custos no período" value={formatCurrency(operations.cash.totals.expenses)} />
-              <InfoMetric label="Saldo operacional" value={formatCurrency(operations.cash.totals.operationalBalance)} tone="accent" />
-            </div>
+          <SectionShell eyebrow="Central de inteligência" title="Inteligência do negócio" description="Dados reais transformados em contexto para apoiar decisões. O Grid operacional continua separado e inalterado.">
+            <BusinessIntelligenceSection model={intelligenceModel} view={intelligenceView} />
           </SectionShell>
         ) : null}
 

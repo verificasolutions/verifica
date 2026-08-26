@@ -50,5 +50,18 @@ export async function confirmAppointmentAction(formData: FormData) {
     );
   }
 
-  redirect(`/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
+  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
+}
+
+export async function submitAppointmentAction(formData: FormData) {
+  const { token, customer } = await requireCustomer();
+  const vehicleId = String(formData.get("vehicle") ?? "").trim();
+  const serviceIds = formData.getAll("service_id").map(String);
+  const scheduledFor = String(formData.get("scheduled_for") ?? "").trim();
+  if (!scheduledFor) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), error: "Escolha data e horário." }));
+  const draft = await createAppointmentDraftUseCase({ token, customer, vehicleId, serviceIds, scheduledFor });
+  if (draft.error || !draft.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), scheduled_for: scheduledFor, error: draft.error ?? "Selecione os serviços." }));
+  const result = await confirmAppointmentUseCase({ token, customer, draftId: draft.data.draftId, scheduledFor });
+  if (result.error || !result.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), scheduled_for: scheduledFor, error: result.error ?? "Não foi possível confirmar." }));
+  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
 }

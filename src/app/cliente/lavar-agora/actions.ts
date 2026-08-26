@@ -40,5 +40,16 @@ export async function confirmOrderAction(formData: FormData) {
     redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), error: encodeURIComponent(result.error ?? "Erro.") }));
   }
 
-  redirect(`/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
+  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
+}
+
+export async function submitOrderAction(formData: FormData) {
+  const { token, customer } = await requireCustomer();
+  const vehicleId = String(formData.get("vehicle") ?? "").trim();
+  const serviceIds = formData.getAll("service_id").map(String);
+  const draft = await createOrderDraftUseCase({ token, customer, vehicleId, serviceIds });
+  if (draft.error || !draft.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), error: draft.error ?? "Selecione os serviços." }));
+  const result = await confirmOrderUseCase({ token, customer, draftId: draft.data.draftId });
+  if (result.error || !result.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), error: result.error ?? "Não foi possível confirmar." }));
+  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
 }

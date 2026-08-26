@@ -5,7 +5,7 @@ import { useState } from "react";
 import { signOutAction } from "@/app/login/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-type TenantSection = "dashboard" | "caixa" | "clientes" | "estoque" | "crescendo" | "suporte" | "adm";
+type TenantSection = "dashboard" | "caixa" | "inteligencia" | "clientes" | "estoque" | "crescendo" | "suporte" | "adm";
 
 type TenantSidebarProps = {
   actorName: string;
@@ -17,6 +17,7 @@ type TenantSidebarProps = {
 const items: Array<{ id: TenantSection; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "caixa", label: "Caixa" },
+  { id: "inteligencia", label: "Inteligência" },
   { id: "clientes", label: "Clientes" },
   { id: "estoque", label: "Estoque" },
   { id: "crescendo", label: "Crescendo" },

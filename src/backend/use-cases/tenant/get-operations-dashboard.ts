@@ -2,7 +2,7 @@ import "server-only";
 import { requireOwnerOrManager } from "@/backend/auth/guards";
 import { listAppointmentsForMonthByTenant, listScheduledAppointmentsByTenant } from "@/backend/repos/appointments-repo";
 import { listQueueForTodayByTenant } from "@/backend/repos/attendances-operations-repo";
-import { getOpenCashSession, listCashEntriesForCurrentMonth, listCashEntriesForOpenDay } from "@/backend/repos/cash-repo";
+import { getOpenCashSession, listCashEntriesForCurrentMonth, listCashEntriesForDateRange, listCashEntriesForOpenDay } from "@/backend/repos/cash-repo";
 import {
   getCustomerWorkspaceByTenant,
   listCustomersWithLastAttendanceByTenant,
@@ -15,6 +15,49 @@ import { listActiveServicesByTenant } from "@/backend/repos/services-repo";
 import { getTenantSettings } from "@/backend/repos/tenant-settings-repo";
 import { listVehicleCatalog } from "@/backend/repos/vehicle-catalog-repo";
 
+type CashPeriod = "day" | "week" | "fortnight" | "month" | "year";
+
+function formatDate(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(value);
+}
+
+function getCashPeriodRange(period: CashPeriod) {
+  const now = new Date();
+  const saoPauloDate = new Date(`${formatDate(now)}T12:00:00`);
+  const day = saoPauloDate.getDate();
+  const start = new Date(saoPauloDate);
+
+  if (period === "day") {
+    start.setDate(day);
+  } else if (period === "week") {
+    const mondayOffset = (saoPauloDate.getDay() + 6) % 7;
+    start.setDate(day - mondayOffset);
+  } else if (period === "fortnight") {
+    start.setDate(day - 13);
+  } else if (period === "month") {
+    start.setDate(1);
+  } else {
+    start.setMonth(0, 1);
+  }
+
+  return { start: formatDate(start), end: formatDate(saoPauloDate) };
+}
+
+function classifyCashEntry(description: string, kind: "income" | "expense") {
+  const value = description.toLowerCase();
+  if (kind === "income") {
+    if (value.includes("estética") || value.includes("estetica") || value.includes("polimento")) return "Estética";
+    if (value.includes("higien")) return "Higienização";
+    if (value.includes("lavag")) return "Lavagem";
+    return "Outros";
+  }
+  if (value.includes("insumo") || value.includes("produto")) return "Produtos";
+  if (value.includes("diária") || value.includes("diaria") || value.includes("salário") || value.includes("salario")) return "Salários";
+  if (value.includes("aluguel")) return "Aluguel";
+  if (value.includes("energia")) return "Energia";
+  return "Outros";
+}
+
 export async function getOperationsDashboardUseCase(options?: {
   customerSearch?: string | null;
   selectedCustomerId?: string | null;
@@ -22,9 +65,12 @@ export async function getOperationsDashboardUseCase(options?: {
   selectedEmployeeId?: string | null;
   appointmentMonth?: string | null;
   mode?: "board" | "full";
+  cashPeriod?: CashPeriod;
 }) {
   const context = await requireOwnerOrManager();
   const appointmentMonthValue = (options?.appointmentMonth ?? "").trim();
+  const cashPeriod = options?.cashPeriod ?? "day";
+  const cashRange = getCashPeriodRange(cashPeriod);
   const appointmentMonthMatch = /^(\d{4})-(\d{2})$/.exec(appointmentMonthValue);
   const referenceDate = new Date();
   const appointmentCalendarYear = appointmentMonthMatch ? Number(appointmentMonthMatch[1]) : referenceDate.getFullYear();
@@ -86,7 +132,7 @@ export async function getOperationsDashboardUseCase(options?: {
     };
   }
 
-  const [services, customers, customersWithHistory, queue, employees, appointments, monthAppointments, cashSession, cashEntries, monthlyCashEntries, settings, operationBoxes, customerWorkspace, vehicleCatalog, activeEmployeeSessions, selectedEmployeeHistory] =
+  const [services, customers, customersWithHistory, queue, employees, appointments, monthAppointments, cashSession, cashEntries, periodCashEntries, monthlyCashEntries, settings, operationBoxes, customerWorkspace, vehicleCatalog, activeEmployeeSessions, selectedEmployeeHistory] =
     await Promise.all([
       listActiveServicesByTenant(context.tenantId),
       listRecentCustomersByTenant(context.tenantId),
@@ -97,6 +143,7 @@ export async function getOperationsDashboardUseCase(options?: {
       listAppointmentsForMonthByTenant(context.tenantId, appointmentCalendarYear, appointmentCalendarMonth),
       getOpenCashSession(context.tenantId),
       listCashEntriesForOpenDay(context.tenantId),
+      listCashEntriesForDateRange(context.tenantId, cashRange.start, cashRange.end),
       listCashEntriesForCurrentMonth(context.tenantId),
       getTenantSettings(context.tenantId),
       listOperationBoxesByTenant(context.tenantId),
@@ -106,7 +153,7 @@ export async function getOperationsDashboardUseCase(options?: {
       options?.selectedEmployeeId ? listEmployeeWorkHistoryByEmployee(context.tenantId, options.selectedEmployeeId) : Promise.resolve([]),
     ]);
 
-  const cashTotals = cashEntries.reduce(
+  const cashTotals = periodCashEntries.reduce(
     (acc, item) => {
       if (item.kind === "expense") {
         acc.expenses += item.amount;
@@ -122,7 +169,7 @@ export async function getOperationsDashboardUseCase(options?: {
     { cash: 0, pix: 0, card: 0, pending: 0, income: 0, expenses: 0 },
   );
 
-  const cashExpense = cashEntries
+  const cashExpense = periodCashEntries
     .filter((item) => item.kind === "expense" && (item.payment_method === "cash" || item.payment_method === null))
     .reduce((sum, item) => sum + item.amount, 0);
   const openingBalance = Number(cashSession?.opening_balance ?? 0);
@@ -179,9 +226,22 @@ export async function getOperationsDashboardUseCase(options?: {
     settings,
     operationBoxes,
     vehicleCatalog,
-    cash: {
-      session: cashSession,
-      entries: cashEntries,
+      cash: {
+        session: cashSession,
+        entries: periodCashEntries,
+        dailyEntries: cashEntries,
+        period: cashPeriod,
+        range: cashRange,
+        insights: {
+          incomeByCategory: ["Lavagem", "Estética", "Higienização", "Outros"].map((category) => ({
+            category,
+            amount: periodCashEntries.filter((item) => item.kind === "income" && classifyCashEntry(item.description, item.kind) === category).reduce((sum, item) => sum + item.amount, 0),
+          })).filter((item) => item.amount > 0),
+          expenseByCategory: ["Produtos", "Salários", "Aluguel", "Energia", "Outros"].map((category) => ({
+            category,
+            amount: periodCashEntries.filter((item) => item.kind === "expense" && classifyCashEntry(item.description, item.kind) === category).reduce((sum, item) => sum + item.amount, 0),
+          })).filter((item) => item.amount > 0),
+        },
       dailyPayouts,
       totals: {
         ...cashTotals,

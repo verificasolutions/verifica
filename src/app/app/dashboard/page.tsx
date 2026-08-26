@@ -68,9 +68,10 @@ import {
 
 export const maxDuration = 300;
 
-type TenantSection = "dashboard" | "caixa" | "clientes" | "estoque" | "crescendo" | "suporte" | "adm";
+type TenantSection = "dashboard" | "caixa" | "inteligencia" | "clientes" | "estoque" | "crescendo" | "suporte" | "adm";
 type DashboardDrawer = "agenda" | "agendar" | "agendamentos" | "resumo" | "fila" | "prontos" | "novo" | "etapa";
 type CashDrawer = "entries" | "expenses" | "monthly";
+type CashPeriod = "day" | "week" | "fortnight" | "month" | "year";
 type AdmPanel = "reports" | "services" | "employees" | "settings" | "whatsapp" | "social";
 
 function formatCurrency(value: number) {
@@ -358,6 +359,7 @@ function hrefFor(
     drawer?: DashboardDrawer | null;
     panel?: AdmPanel | null;
     cashDrawer?: CashDrawer | null;
+    cashPeriod?: CashPeriod | null;
     customer?: string | null;
     customerForm?: string | null;
     quoteForm?: string | null;
@@ -381,6 +383,7 @@ function hrefFor(
   if (options?.drawer) params.set("drawer", options.drawer);
   if (options?.panel) params.set("panel", options.panel);
   if (options?.cashDrawer) params.set("cashDrawer", options.cashDrawer);
+  if (options?.cashPeriod) params.set("cashPeriod", options.cashPeriod);
   if (options?.customer) params.set("customer", options.customer);
   if (options?.customerForm) params.set("customerForm", options.customerForm);
   if (options?.quoteForm) params.set("quoteForm", options.quoteForm);
@@ -1749,7 +1752,28 @@ function CashDrawerContent({
   if (drawer === "entries") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-white/58">Entradas realizadas na sessão aberta do caixa, separadas por forma de recebimento.</p>
+        <p className="text-sm text-white/58">Registre um recebimento ou consulte os recebimentos do período selecionado.</p>
+        <form action={createCashEntryAction} className="space-y-3 rounded-[22px] border border-emerald-400/14 bg-emerald-400/6 p-4">
+          <input type="hidden" name="redirect_to" value="/app/dashboard?section=caixa" />
+          <input type="hidden" name="kind" value="income" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <select name="entry_category" defaultValue="service" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none">
+              <option value="service">Serviço</option>
+              <option value="addon">Adicional</option>
+              <option value="extra">Extra</option>
+              <option value="other_income">Outra entrada</option>
+            </select>
+            <select name="payment_method" defaultValue="cash" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none">
+              <option value="cash">Dinheiro</option>
+              <option value="pix">Pix</option>
+              <option value="card">Cartão</option>
+              <option value="pending">Pendente</option>
+            </select>
+            <CurrencyInput name="amount" placeholder="R$ 0,00" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none" />
+            <input name="item_name" placeholder="Descrição do recebimento" className="h-12 w-full rounded-2xl border border-white/10 bg-[#0f141b] px-3 text-sm text-white outline-none" />
+          </div>
+          <button className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-emerald-300 px-4 text-sm font-semibold text-slate-950">Lançar recebimento</button>
+        </form>
         <div className="grid gap-3 sm:grid-cols-2">
           {channelGroups.map((group) => (
             <div key={group.label} className="rounded-[20px] border border-emerald-400/14 bg-emerald-400/6 p-4">
@@ -1785,7 +1809,20 @@ function CashDrawerContent({
   if (drawer === "expenses") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-white/58">Saídas realizadas na sessão aberta, com diárias e demais despesas do dia.</p>
+        <p className="text-sm text-white/58">Registre uma saída ou consulte as saídas do período selecionado.</p>
+        <div className="rounded-[22px] border border-rose-400/14 bg-rose-400/6 p-4">
+          <CashExpenseForm
+            formAction={createCashExpenseAction}
+            dailyPayouts={operations.cash.dailyPayouts
+              .filter((payout) => payout.status !== "paid")
+              .map((payout) => ({
+                employeeId: payout.employee_id,
+                name: payout.employees?.name ?? "Funcionário",
+                roleLabel: payout.employees?.role_label ?? "Equipe",
+                amount: payout.amount,
+              }))}
+          />
+        </div>
         <div className="space-y-3">
           {expenses.length === 0 ? (
             <EmptyState text="Nenhuma saída registrada nesta sessão." />
@@ -1855,6 +1892,41 @@ function CashDrawerContent({
   );
 }
 
+function CashInsightBars({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: Array<{ category: string; amount: number }>;
+  tone: "income" | "expense";
+}) {
+  const maximum = Math.max(...items.map((item) => item.amount), 1);
+
+  return (
+    <div className="rounded-[28px] border border-white/10 bg-black/15 p-6">
+      <p className="text-lg font-semibold text-white">{title}</p>
+      <div className="mt-5 space-y-4">
+        {items.length === 0 ? <EmptyState text="Sem movimentações classificadas neste período." /> : null}
+        {items.map((item) => (
+          <div key={item.category}>
+            <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+              <span className="text-white/72">{item.category}</span>
+              <span className="font-semibold text-white">{formatCurrency(item.amount)}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/8">
+              <div
+                className={`h-full rounded-full ${tone === "income" ? "bg-emerald-300" : "bg-rose-300"}`}
+                style={{ width: `${Math.max((item.amount / maximum) * 100, 4)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -1865,6 +1937,7 @@ export default async function DashboardPage({
     drawer?: string;
     panel?: string;
     cashDrawer?: string;
+    cashPeriod?: string;
     customer?: string;
     customerForm?: string;
     quoteForm?: string;
@@ -1890,9 +1963,10 @@ export default async function DashboardPage({
   }>;
 }) {
   const params = await searchParams;
-  const currentSection = (["dashboard", "caixa", "clientes", "estoque", "crescendo", "suporte", "adm"].includes(params.section ?? "") ? params.section : "dashboard") as TenantSection;
+  const currentSection = (["dashboard", "caixa", "inteligencia", "clientes", "estoque", "crescendo", "suporte", "adm"].includes(params.section ?? "") ? params.section : "dashboard") as TenantSection;
   const drawer = (["agenda", "agendar", "agendamentos", "resumo", "fila", "prontos", "novo", "etapa"].includes(params.drawer ?? "") ? params.drawer : null) as DashboardDrawer | null;
   const cashDrawer = (["entries", "expenses", "monthly"].includes(params.cashDrawer ?? "") ? params.cashDrawer : null) as CashDrawer | null;
+  const cashPeriod = (["day", "week", "fortnight", "month", "year"].includes(params.cashPeriod ?? "") ? params.cashPeriod : "day") as CashPeriod;
   const admPanel = (["reports", "services", "employees", "settings", "whatsapp", "social"].includes(params.panel ?? "")
     ? params.panel
     : "reports") as AdmPanel;
@@ -1931,6 +2005,7 @@ export default async function DashboardPage({
       selectedServiceId: currentSection === "adm" && admPanel === "services" ? params.service ?? null : null,
       selectedEmployeeId: currentSection === "adm" && admPanel === "employees" ? selectedEmployeeId || null : null,
       appointmentMonth: appointmentsMonth,
+      cashPeriod,
       mode: boardOnly ? "board" : "full",
     }),
     currentSection === "adm" && admPanel === "reports" ? getReportsUseCase() : Promise.resolve(null),
@@ -2189,15 +2264,6 @@ export default async function DashboardPage({
             description="Lance recebimentos e despesas com leitura rápida, histórico limpo e fechamento automático."
           >
             <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-                <InfoMetric label="Status" value={dashboard.stats.cashStatus} tone="accent" />
-                <InfoMetric label="Abertura" value={operations.cash.session ? formatTime(operations.cash.session.opened_at) : "Caixa fechado"} />
-                <InfoMetric label="Saldo atual" value={formatCurrency(operations.cash.totals.operationalBalance)} tone="accent" />
-                <Link href={hrefFor("caixa", { cashDrawer: "entries" })}><InfoMetric label="Entradas totais" value={formatCurrency(operations.cash.totals.gross)} /></Link>
-                <Link href={hrefFor("caixa", { cashDrawer: "expenses" })}><InfoMetric label="Saídas totais" value={formatCurrency(operations.cash.totals.expenses)} /></Link>
-                <Link href={hrefFor("caixa", { cashDrawer: "monthly" })}><InfoMetric label="Movimento do mês" value={formatCurrency((operations.cash.monthEntries ?? []).reduce((sum, entry) => sum + (entry.kind === "income" ? entry.amount : 0), 0))} /></Link>
-              </div>
-
               {!operations.cash.session ? (
                 <div className="rounded-[28px] border border-white/10 bg-black/15 p-6">
                   <div className="max-w-xl">
@@ -2221,8 +2287,8 @@ export default async function DashboardPage({
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-                    <div className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="hidden space-y-4">
                       <div className="rounded-[28px] border border-emerald-400/12 bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(10,15,23,0.72))] p-6">
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -2381,8 +2447,34 @@ export default async function DashboardPage({
 
                     <div className="space-y-4">
                       <div className="rounded-[28px] border border-white/10 bg-black/15 p-6">
-                        <p className="text-lg font-semibold text-white">Resumo financeiro</p>
-                        <p className="mt-2 text-sm text-white/56">Resumo somente da sessão aberta do caixa. Entradas e saídas detalhadas abrem separadas.</p>
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <p className="text-lg font-semibold text-white">Resumo financeiro</p>
+                            <p className="mt-2 text-sm text-white/56">Visão do caixa no período selecionado. O dia é exibido por padrão.</p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-1">
+                            {([
+                              ["day", "Hoje"],
+                              ["week", "Semana"],
+                              ["fortnight", "15 dias"],
+                              ["month", "Mês"],
+                              ["year", "Ano"],
+                            ] as Array<[CashPeriod, string]>).map(([value, label]) => (
+                              <Link
+                                key={value}
+                                href={hrefFor("caixa", { cashPeriod: value })}
+                                className={`rounded-xl px-3 py-2 text-xs font-medium ${cashPeriod === value ? "bg-[var(--accent)] text-slate-950" : "text-white/62 hover:bg-white/8 hover:text-white"}`}
+                              >
+                                {label}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          <InfoMetric label="Status" value={dashboard.stats.cashStatus} tone="accent" />
+                          <InfoMetric label="Abertura" value={operations.cash.session ? formatTime(operations.cash.session.opened_at) : "Caixa fechado"} />
+                        </div>
 
                         <div className="mt-5 space-y-3">
                           {[
@@ -2397,16 +2489,27 @@ export default async function DashboardPage({
                             </div>
                           ))}
                         </div>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                          <Link href={hrefFor("caixa", { cashDrawer: "entries" })} className="rounded-[18px] border border-emerald-400/16 bg-emerald-400/8 px-4 py-3 text-center text-sm font-medium text-emerald-100">
-                            Ver entradas
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <Link href={hrefFor("caixa", { cashDrawer: "entries", cashPeriod })} className="rounded-[18px] border border-emerald-400/16 bg-emerald-400/8 px-4 py-3 text-center text-sm font-medium text-emerald-100">
+                            Recebimentos
                           </Link>
-                          <Link href={hrefFor("caixa", { cashDrawer: "expenses" })} className="rounded-[18px] border border-rose-400/16 bg-rose-400/8 px-4 py-3 text-center text-sm font-medium text-rose-100">
-                            Ver saídas
+                          <Link href={hrefFor("caixa", { cashDrawer: "expenses", cashPeriod })} className="rounded-[18px] border border-rose-400/16 bg-rose-400/8 px-4 py-3 text-center text-sm font-medium text-rose-100">
+                            Saídas
                           </Link>
-                          <Link href={hrefFor("caixa", { cashDrawer: "monthly" })} className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-medium text-white/82">
-                            Ver mês
-                          </Link>
+                        </div>
+                        <div className="mt-5 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-2">
+                          <form action={closeCashSessionAction}>
+                            <input type="hidden" name="redirect_to" value="/app/dashboard?section=caixa" />
+                            <button className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white/82">
+                              Fechar caixa do dia
+                            </button>
+                          </form>
+                          <form action={endShiftAction}>
+                            <input type="hidden" name="redirect_to" value="/login" />
+                            <button className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 text-sm font-medium text-rose-100">
+                              Encerrar expediente
+                            </button>
+                          </form>
                         </div>
                       </div>
 
@@ -2463,7 +2566,7 @@ export default async function DashboardPage({
                     </div>
                   </div>
 
-                  <div className="rounded-[28px] border border-white/10 bg-black/15 p-6">
+                  <div className="hidden rounded-[28px] border border-white/10 bg-black/15 p-6">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-lg font-semibold text-white">Sessão atual do caixa</p>
@@ -2505,10 +2608,30 @@ export default async function DashboardPage({
                 </>
               )}
             </div>
+            {operations.cash.insights ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <CashInsightBars title="De onde veio o dinheiro?" items={operations.cash.insights.incomeByCategory} tone="income" />
+                <CashInsightBars title="Para onde foi o dinheiro?" items={operations.cash.insights.expenseByCategory} tone="expense" />
+              </div>
+            ) : null}
           </SectionShell>
         ) : null}
 
         {currentSection === "estoque" && inventoryWorkspace ? <InventorySection inventory={inventoryWorkspace} /> : null}
+
+        {currentSection === "inteligencia" ? (
+          <SectionShell eyebrow="Inteligência" title="Visão financeira" description="Transforme os lançamentos em decisões práticas para o negócio.">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <CashInsightBars title="Receita por origem" items={operations.cash.insights?.incomeByCategory ?? []} tone="income" />
+              <CashInsightBars title="Custos por categoria" items={operations.cash.insights?.expenseByCategory ?? []} tone="expense" />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <InfoMetric label="Receita no período" value={formatCurrency(operations.cash.totals.income)} tone="accent" />
+              <InfoMetric label="Custos no período" value={formatCurrency(operations.cash.totals.expenses)} />
+              <InfoMetric label="Saldo operacional" value={formatCurrency(operations.cash.totals.operationalBalance)} tone="accent" />
+            </div>
+          </SectionShell>
+        ) : null}
 
         {currentSection === "crescendo" && tenantGrowthWorkspace ? <TenantGrowthSection workspace={tenantGrowthWorkspace} /> : null}
 

@@ -1,6 +1,5 @@
 import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getSaoPauloDayRange } from "@/backend/shared/date-range";
 import type { CashEntryRecord, CashSessionRecord } from "@/backend/types";
 
 export async function getOpenCashSession(tenantId: string) {
@@ -54,6 +53,23 @@ export async function listCashEntriesForCurrentMonth(tenantId: string) {
     .eq("tenant_id", tenantId)
     .gte("effective_date", monthStart)
     .lte("effective_date", monthEnd)
+    .order("effective_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as CashEntryRecord[]).map((item) => ({
+    ...item,
+    amount: Number(item.amount ?? 0),
+  }));
+}
+
+export async function listCashEntriesForDateRange(tenantId: string, startDate: string, endDate: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("cash_entries")
+    .select("id, tenant_id, kind, payment_method, description, amount, effective_date, settlement_status, card_kind, created_at")
+    .eq("tenant_id", tenantId)
+    .gte("effective_date", startDate)
+    .lte("effective_date", endDate)
     .order("effective_date", { ascending: false })
     .order("created_at", { ascending: false });
 

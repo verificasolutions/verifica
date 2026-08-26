@@ -7,6 +7,7 @@ import {
   getCustomerWorkspaceByTenant,
   listCustomersWithLastAttendanceByTenant,
   listRecentCustomersByTenant,
+  type CustomerPeriod,
 } from "@/backend/repos/customers-repo";
 import { listEmployeesByTenant } from "@/backend/repos/employees-repo";
 import { listActiveEmployeeSessionsByTenant, listEmployeeWorkHistoryByEmployee } from "@/backend/repos/employee-work-sessions-repo";
@@ -66,6 +67,7 @@ export async function getOperationsDashboardUseCase(options?: {
   appointmentMonth?: string | null;
   mode?: "board" | "full";
   cashPeriod?: CashPeriod;
+  customerPeriod?: CustomerPeriod;
 }) {
   const context = await requireOwnerOrManager();
   const appointmentMonthValue = (options?.appointmentMonth ?? "").trim();
@@ -136,7 +138,7 @@ export async function getOperationsDashboardUseCase(options?: {
     await Promise.all([
       listActiveServicesByTenant(context.tenantId),
       listRecentCustomersByTenant(context.tenantId),
-      listCustomersWithLastAttendanceByTenant(context.tenantId, options?.customerSearch),
+      listCustomersWithLastAttendanceByTenant(context.tenantId, options?.customerSearch, options?.customerPeriod ?? "week"),
       listQueueForTodayByTenant(context.tenantId),
       listEmployeesByTenant(context.tenantId),
       listScheduledAppointmentsByTenant(context.tenantId),

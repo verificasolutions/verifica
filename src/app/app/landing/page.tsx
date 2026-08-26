@@ -3,6 +3,7 @@ import { AuthSubmitButton } from "@/components/auth-submit-button";
 import { BusinessHoursField } from "@/components/business-hours-field";
 import { LandingPageForm } from "@/components/landing-page-form";
 import { getAppUrl } from "@/backend/shared/app-url";
+import { buildPortalEntryUrl, buildQrImageSrc } from "@/backend/shared/qr-code";
 import { getLandingWorkspaceUseCase } from "@/backend/use-cases/tenant/get-landing-workspace";
 import { listPendingLandingCommentsUseCase } from "@/backend/use-cases/tenant/review-landing-comment";
 import { deleteLandingReviewAction, saveLandingReviewAction, reviewLandingCommentAction } from "./actions";
@@ -33,6 +34,7 @@ export default async function LandingWorkspacePage({
   const error = typeof params.error === "string" ? params.error : "";
   const publicPath = formatPublicPath(workspace.tenant.slug);
   const publicUrl = publicPath ? `${getAppUrl()}${publicPath.replace(/^\/verifica/, "")}` : null;
+  const customerPortalUrl = workspace.tenant.slug ? buildPortalEntryUrl(workspace.tenant.slug) : null;
   const landingUnlocked = workspace.settings?.landing_enabled ?? false;
   const whatsappLink = normalizeWhatsappLink(
     workspace.companyProfile?.phone ?? workspace.companyProfile?.phone_secondary ?? workspace.tenant.whatsapp,
@@ -78,6 +80,13 @@ export default async function LandingWorkspacePage({
             </div>
           </div>
         </div>
+
+        {customerPortalUrl && landingUnlocked ? (
+          <div className="mt-5 flex flex-col gap-4 rounded-[22px] border border-cyan-300/20 bg-cyan-300/5 p-4 sm:flex-row sm:items-center">
+            <img src={buildQrImageSrc(customerPortalUrl, 220)} alt="QR Code do portal do cliente" className="size-40 rounded-xl bg-white p-2" />
+            <div><p className="text-sm font-semibold text-white">QR Code do portal do cliente</p><p className="mt-1 break-all text-xs text-white/60">{customerPortalUrl}</p><p className="mt-2 text-xs text-white/45">Este QR abre a entrada atual do cliente, vinculada ao tenant.</p></div>
+          </div>
+        ) : null}
 
         {message ? <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</div> : null}

@@ -368,6 +368,7 @@ function hrefFor(
     customerForm?: string | null;
     quoteForm?: string | null;
     clientSearch?: string | null;
+    customerPeriod?: "week" | "fortnight" | "month" | null;
     employeeId?: string | null;
     employeeView?: "details" | "history" | null;
     service?: string | null;
@@ -393,6 +394,7 @@ function hrefFor(
   if (options?.customerForm) params.set("customerForm", options.customerForm);
   if (options?.quoteForm) params.set("quoteForm", options.quoteForm);
   if (options?.clientSearch) params.set("clientSearch", options.clientSearch);
+  if (options?.customerPeriod) params.set("customerPeriod", options.customerPeriod);
   if (options?.employeeId) params.set("employeeId", options.employeeId);
   if (options?.employeeView) params.set("employeeView", options.employeeView);
   if (options?.service) params.set("service", options.service);
@@ -1949,6 +1951,7 @@ export default async function DashboardPage({
     customerForm?: string;
     quoteForm?: string;
     clientSearch?: string;
+    customerPeriod?: string;
     employeeId?: string;
     employeeView?: string;
     service?: string;
@@ -1981,6 +1984,7 @@ export default async function DashboardPage({
     : "reports") as AdmPanel;
   const tvMode = params.tv === "1";
   const clientSearch = (params.clientSearch ?? "").trim();
+  const customerPeriod = (["week", "fortnight", "month"].includes(params.customerPeriod ?? "") ? params.customerPeriod : "week") as "week" | "fortnight" | "month";
   const selectedEmployeeId = currentSection === "adm" && admPanel === "employees" ? (params.employeeId ?? "").trim() : "";
   const employeeView = currentSection === "adm" && admPanel === "employees" ? ((params.employeeView ?? "details").trim() || "details") : "details";
   const isCreatingEmployee = currentSection === "adm" && admPanel === "employees" && selectedEmployeeId === "new";
@@ -2015,6 +2019,7 @@ export default async function DashboardPage({
       selectedEmployeeId: currentSection === "adm" && admPanel === "employees" ? selectedEmployeeId || null : null,
       appointmentMonth: appointmentsMonth,
       cashPeriod,
+      customerPeriod,
       mode: boardOnly ? "board" : "full",
     }),
     currentSection === "adm" && admPanel === "reports" ? getReportsUseCase() : Promise.resolve(null),
@@ -2650,6 +2655,7 @@ export default async function DashboardPage({
                 <form method="get" className="flex flex-col gap-3 sm:flex-row">
                   <input type="hidden" name="section" value="clientes" />
                   {params.customer ? <input type="hidden" name="customer" value={params.customer} /> : null}
+                  <input type="hidden" name="customerPeriod" value={customerPeriod} />
                   <input
                     type="text"
                     name="clientSearch"
@@ -2659,6 +2665,15 @@ export default async function DashboardPage({
                   />
                   <button className="rounded-2xl border border-white/10 bg-white/6 px-4 text-sm text-white/82">Buscar</button>
                 </form>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="mr-1 text-white/45">Clientes recentes:</span>
+                  {([["week", "Semana"], ["fortnight", "Quinzena"], ["month", "Mês"]] as const).map(([value, label]) => (
+                    <Link key={value} href={hrefFor("clientes", { customerPeriod: value, clientSearch })} className={`rounded-full border px-3 py-1.5 ${customerPeriod === value ? "border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent)]" : "border-white/10 bg-white/5 text-white/60"}`}>
+                      {label}
+                    </Link>
+                  ))}
+                </div>
 
                 <div className="mt-4 space-y-3">
                   {operations.customersWithHistory.length === 0 ? (

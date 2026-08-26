@@ -113,9 +113,20 @@ export async function listRecentCustomersByTenant(tenantId: string) {
   return (data ?? []) as CustomerRecord[];
 }
 
-export async function listCustomersWithLastAttendanceByTenant(tenantId: string, search?: string | null) {
+export type CustomerPeriod = "week" | "fortnight" | "month";
+
+function customerPeriodStart(period: CustomerPeriod) {
+  const now = new Date();
+  const local = new Date(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now) + "T12:00:00");
+  if (period === "month") local.setDate(1);
+  else if (period === "fortnight") local.setDate(local.getDate() - 13);
+  else local.setDate(local.getDate() - ((local.getDay() + 6) % 7));
+  return local.getTime();
+}
+
+export async function listCustomersWithLastAttendanceByTenant(tenantId: string, search?: string | null, period: CustomerPeriod = "week") {
   const supabase = await createSupabaseServerClient();
-  const [{ data: customers }, { data: attendances }] = await Promise.all([
+  const [{ data: customers }, { data: attendances }, { data: vehicles }] = await Promise.all([
     supabase
       .from("customers")
       .select(CUSTOMER_SELECT)
@@ -128,6 +139,12 @@ export async function listCustomersWithLastAttendanceByTenant(tenantId: string, 
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(500),
+    supabase
+      .from("vehicles")
+      .select("customer_id, model, plate, color, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
   ]);
 
   const latestByCustomer = new Map<string, { created_at: string; vehicle: VehicleSummary | null }>();
@@ -140,6 +157,10 @@ export async function listCustomersWithLastAttendanceByTenant(tenantId: string, 
     });
   }
 
+  for (const row of (vehicles ?? []) as Array<{ customer_id: string; model: string; plate: string; color: string | null; created_at: string }>) {
+    if (!latestByCustomer.has(row.customer_id)) latestByCustomer.set(row.customer_id, { created_at: row.created_at, vehicle: { model: row.model, plate: row.plate, color: row.color } });
+  }
+
   const normalizedSearch = (search ?? "").trim().toLowerCase();
 
   return ((customers ?? []) as CustomerRecord[])
@@ -149,6 +170,7 @@ export async function listCustomersWithLastAttendanceByTenant(tenantId: string, 
       lastVehicle: latestByCustomer.get(customer.id)?.vehicle ?? null,
     }))
     .filter((customer) => {
+      if (!normalizedSearch && (!customer.lastAttendanceAt || new Date(customer.lastAttendanceAt).getTime() < customerPeriodStart(period))) return false;
       if (!normalizedSearch) return true;
 
       const haystack = [
@@ -228,7 +250,7 @@ export async function getCustomerWorkspaceByTenant(tenantId: string, customerId:
   return {
     customer: customer as CustomerRecord,
     lastAttendanceAt: attendanceItems[0]?.created_at ?? null,
-    lastVehicle: attendanceItems[0]?.vehicle ?? null,
+    lastVehicle: attendanceItems[0]?.vehicle ?? (vehicles[0] ? { model: vehicles[0].model, plate: vehicles[0].plate, color: vehicles[0].color } : null),
     vehicles,
     quotes,
     attendances: attendanceItems.map((item) => ({

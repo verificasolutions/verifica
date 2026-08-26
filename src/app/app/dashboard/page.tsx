@@ -2471,9 +2471,15 @@ export default async function DashboardPage({
                           </div>
                         </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                          <InfoMetric label="Status" value={dashboard.stats.cashStatus} tone="accent" />
-                          <InfoMetric label="Abertura" value={operations.cash.session ? formatTime(operations.cash.session.opened_at) : "Caixa fechado"} />
+                        <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Status</p>
+                            <p className="mt-1 text-sm font-semibold text-emerald-200">{dashboard.stats.cashStatus}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Abertura</p>
+                            <p className="mt-1 text-sm font-semibold text-white">{operations.cash.session ? formatTime(operations.cash.session.opened_at) : "Caixa fechado"}</p>
+                          </div>
                         </div>
 
                         <div className="mt-5 space-y-3">
@@ -2547,22 +2553,6 @@ export default async function DashboardPage({
                         </div>
                       </div>
 
-                      <div className="rounded-[28px] border border-white/10 bg-black/15 p-6">
-                        <p className="text-lg font-semibold text-white">Fechamento</p>
-                        <p className="mt-2 text-sm text-white/56">O fechamento encerra a sessão do caixa do dia. Os valores detalhados de entradas e saídas já ficam distribuídos nos blocos acima e no histórico da sessão.</p>
-                        <form action={closeCashSessionAction} className="mt-4">
-                          <input type="hidden" name="redirect_to" value="/app/dashboard?section=caixa" />
-                          <button className="flex min-h-14 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white/82">
-                            Fechar caixa do dia
-                          </button>
-                        </form>
-                        <form action={endShiftAction} className="mt-3">
-                          <input type="hidden" name="redirect_to" value="/login" />
-                          <button className="flex min-h-14 w-full items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 text-sm font-medium text-rose-100">
-                            Encerrar expediente
-                          </button>
-                        </form>
-                      </div>
                     </div>
                   </div>
 

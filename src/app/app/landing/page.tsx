@@ -4,7 +4,11 @@ import { BusinessHoursField } from "@/components/business-hours-field";
 import { LandingPageForm } from "@/components/landing-page-form";
 import { getAppUrl } from "@/backend/shared/app-url";
 import { getLandingWorkspaceUseCase } from "@/backend/use-cases/tenant/get-landing-workspace";
-import { deleteLandingReviewAction, saveLandingReviewAction } from "./actions";
+import { listPendingLandingCommentsUseCase } from "@/backend/use-cases/tenant/review-landing-comment";
+import { deleteLandingReviewAction, saveLandingReviewAction, reviewLandingCommentAction } from "./actions";
+
+// a tela interna reflete sempre a URL pública atual do deploy (sem cache obsoleto)
+export const dynamic = "force-dynamic";
 
 function normalizeWhatsappLink(value: string | null | undefined, fallbackMessage: string | null | undefined) {
   const digits = (value ?? "").replace(/\D/g, "");
@@ -23,6 +27,7 @@ export default async function LandingWorkspacePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const workspace = await getLandingWorkspaceUseCase();
+  const pendingComments = await listPendingLandingCommentsUseCase();
   const params = searchParams ? await searchParams : {};
   const message = typeof params.message === "string" ? params.message : "";
   const error = typeof params.error === "string" ? params.error : "";
@@ -104,12 +109,9 @@ export default async function LandingWorkspacePage({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <input name="category" defaultValue={workspace.landing?.category ?? ""} placeholder="Categoria do negócio" className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none" />
-                <input
-                  name="city_label"
-                  defaultValue={workspace.landing?.city_label ?? workspace.companyProfile?.city ?? ""}
-                  placeholder="Cidade / região"
-                  className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none"
-                />
+                <div className="flex items-center rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white/60">
+                  {[workspace.companyProfile?.city, workspace.companyProfile?.state].filter(Boolean).join(" - ") || "Cidade/estado vêm do cadastro (ADM)"}
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-[minmax(0,280px)_1fr]">
@@ -158,38 +160,40 @@ export default async function LandingWorkspacePage({
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <input
-                  name="contact_email"
-                  type="email"
-                  defaultValue={workspace.landing?.contact_email ?? workspace.companyProfile?.email ?? ""}
-                  placeholder="E-mail de contato"
-                  className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none"
-                />
                 <input name="instagram_url" defaultValue={workspace.landing?.instagram_url ?? ""} placeholder="Link do Instagram" className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none" />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
                 <input name="facebook_url" defaultValue={workspace.landing?.facebook_url ?? ""} placeholder="Link do Facebook" className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none" />
-                <input name="website_url" defaultValue={workspace.landing?.website_url ?? ""} placeholder="Site institucional" className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none" />
               </div>
 
-              <div className="grid gap-4">
-                <input
-                  name="address_label"
-                  defaultValue={
-                    workspace.landing?.address_label ??
-                    [workspace.companyProfile?.street, workspace.companyProfile?.street_number, workspace.companyProfile?.neighborhood, workspace.companyProfile?.city]
-                      .filter(Boolean)
-                      .join(", ")
-                  }
-                  placeholder="Endereço resumido"
-                  className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none"
-                />
+              <div className="rounded-[22px] border border-white/10 bg-[#0c1117] p-4">
+                <p className="text-sm font-semibold text-white">Contato e endereço (fonte única: cadastro)</p>
+                <p className="mt-2 text-sm text-white/60">
+                  {(() => {
+                    const addressParts = [
+                      workspace.companyProfile?.street,
+                      workspace.companyProfile?.street_number,
+                      workspace.companyProfile?.complement,
+                      workspace.companyProfile?.neighborhood,
+                      workspace.companyProfile?.city,
+                      workspace.companyProfile?.state,
+                    ].filter(Boolean);
+                    const address = addressParts.join(", ");
+                    return address ? `${address}${workspace.companyProfile?.postal_code ? `, CEP ${workspace.companyProfile.postal_code}` : ""}` : "Endereço não cadastrado.";
+                  })()}
+                </p>
+                <p className="mt-2 text-sm text-white/60">
+                  WhatsApp: {workspace.companyProfile?.phone ?? workspace.companyProfile?.phone_secondary ?? workspace.tenant.whatsapp ?? "-"} · E-mail:{" "}
+                  {workspace.companyProfile?.email ?? "-"} · Site: {workspace.companyProfile?.website ?? "-"}
+                </p>
+                <p className="mt-2 text-xs text-white/38">
+                  Nome, telefone, e-mail, endereço, CEP, cidade/estado e site são editados no cadastro (ADM). A landing sempre exibe os valores atuais.
+                </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <BusinessHoursField name="opening_hours" defaultValue={workspace.landing?.opening_hours ?? ""} />
-                <input name="map_embed_url" defaultValue={workspace.landing?.map_embed_url ?? ""} placeholder="URL do mapa incorporado" className="h-12 rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white outline-none" />
+                <div className="flex items-center rounded-2xl border border-white/10 bg-[#0c1117] px-4 text-sm text-white/60">
+                  Mapa gerado automaticamente a partir do endereço do cadastro
+                </div>
               </div>
 
               <textarea
@@ -255,6 +259,48 @@ export default async function LandingWorkspacePage({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-[26px] border border-white/10 bg-[#11161d] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-white">Comentários (revisão)</p>
+                <p className="mt-1 text-sm text-white/56">Comentários ficam pendentes até aprovação do responsável.</p>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">{pendingComments.length} pendente(s)</span>
+            </div>
+
+            {pendingComments.length === 0 ? (
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-white/5 px-4 py-6 text-sm text-white/52">
+                Nenhum comentário aguardando revisão.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {pendingComments.map((comment) => (
+                  <div key={comment.id} className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+                    <p className="text-sm font-semibold text-white">{comment.author_name}</p>
+                    <p className="mt-2 text-sm text-white/68">{comment.body}</p>
+                    {comment.moderation_suggestion ? (
+                      <p className="mt-2 rounded-[14px] border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+                        Sugestão de moderação: {comment.moderation_suggestion}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex gap-2">
+                      <form action={reviewLandingCommentAction}>
+                        <input type="hidden" name="comment_id" value={comment.id} />
+                        <input type="hidden" name="status" value="approved" />
+                        <button className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs text-emerald-100">Aprovar</button>
+                      </form>
+                      <form action={reviewLandingCommentAction}>
+                        <input type="hidden" name="comment_id" value={comment.id} />
+                        <input type="hidden" name="status" value="rejected" />
+                        <button className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-xs text-rose-100">Rejeitar</button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

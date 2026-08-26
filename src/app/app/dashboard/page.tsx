@@ -3009,8 +3009,8 @@ export default async function DashboardPage({
                     : "Cadastre serviços do tenant com tempo padrão, valor e complemento opcional sobre um serviço já existente."
                 }
               >
-                <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
-                  <div className="rounded-[24px] border border-white/10 bg-black/15 p-5">
+                <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)]">
+                  <div className="min-w-0 rounded-[24px] border border-white/10 bg-black/15 p-5">
                     <p className="text-base font-semibold text-white">Novo serviço</p>
                     <form action={editingService ? updateServiceAction : createServiceAction} className="mt-4 space-y-3">
                       <input type="hidden" name="redirect_to" value="/app/dashboard?section=adm&panel=services" />
@@ -3033,32 +3033,32 @@ export default async function DashboardPage({
                           ))}
                       </select>
                       {isAutomotiveTenant ? (
-                        <div className="space-y-3 rounded-[22px] border border-white/10 bg-black/12 p-4">
-                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3 text-xs uppercase tracking-[0.16em] text-white/42">
+                        <div className="min-w-0 space-y-3 rounded-[22px] border border-white/10 bg-black/12 p-4">
+                          <div className="grid grid-cols-[64px_repeat(3,minmax(0,1fr))] gap-2 text-xs uppercase tracking-[0.12em] text-white/42">
                             <span>Porte</span>
                             <span>Tempo</span>
                             <span>Particular</span>
                             <span>App</span>
                           </div>
-                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[64px_repeat(3,minmax(0,1fr))] gap-2 lg:grid-cols-[64px_112px_128px_128px] [&>input]:h-10 [&>input]:min-w-0 [&>input]:rounded-xl [&>input]:px-2 [&>input]:text-xs">
                             <span className="flex items-center text-sm text-white/72">Pequeno</span>
                             <DurationInput name="minutes_passeio" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "passeio")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_passeio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "passeio")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_app_passeio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "passeio", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[64px_repeat(3,minmax(0,1fr))] gap-2 lg:grid-cols-[64px_112px_128px_128px] [&>input]:h-10 [&>input]:min-w-0 [&>input]:rounded-xl [&>input]:px-2 [&>input]:text-xs">
                             <span className="flex items-center text-sm text-white/72">Médio</span>
                             <DurationInput name="minutes_medio" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "medio")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_medio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "medio")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_app_medio" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "medio", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[64px_repeat(3,minmax(0,1fr))] gap-2 lg:grid-cols-[64px_112px_128px_128px] [&>input]:h-10 [&>input]:min-w-0 [&>input]:rounded-xl [&>input]:px-2 [&>input]:text-xs">
                             <span className="flex items-center text-sm text-white/72">Grande</span>
                             <DurationInput name="minutes_grande" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "grande")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "grande")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_app_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "grande", "app")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                           </div>
-                          <div className="grid grid-cols-[76px_1fr_1fr_1fr] gap-3">
+                          <div className="grid grid-cols-[64px_repeat(3,minmax(0,1fr))] gap-2 lg:grid-cols-[64px_112px_128px_128px] [&>input]:h-10 [&>input]:min-w-0 [&>input]:rounded-xl [&>input]:px-2 [&>input]:text-xs">
                             <span className="flex items-center text-sm text-white/72">X Grande</span>
                             <DurationInput name="minutes_bem_grande" defaultValue={editingService ? formatDurationInput(serviceFormMinutesValue(editingService, "bem_grande")) : undefined} placeholder="45 ou 1:20" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
                             <CurrencyInput name="price_bem_grande" defaultValue={editingService ? formatCurrency(serviceFormPriceValue(editingService, "bem_grande")) : undefined} placeholder="R$ 0,00" className="h-12 rounded-2xl border border-white/10 bg-[#0f141b] px-4 text-sm text-white outline-none" />
@@ -3116,7 +3116,7 @@ export default async function DashboardPage({
                     </form>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/10 bg-black/15 p-5">
+                  <div className="min-w-0 overflow-hidden rounded-[24px] border border-white/10 bg-black/15 p-5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-white">Serviços ativos</p>

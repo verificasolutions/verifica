@@ -4,12 +4,14 @@ import { listServiceQuotesByCustomer } from "@/backend/repos/service-quotes-repo
 import { listActiveVehiclesByCustomer } from "@/backend/repos/vehicles-repo";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CustomerRecord, ServiceQuoteRecord, VehicleRecord } from "@/backend/types";
+import { normalizeNationalPhone } from "@/backend/shared/phone";
 
 const CUSTOMER_SELECT = `
   id,
   tenant_id,
   name,
   whatsapp,
+  phone_normalized,
   legal_name,
   trade_name,
   email,
@@ -314,6 +316,9 @@ export async function updateCustomerForTenant(input: {
   if (input.contactPhone1 !== undefined) patch.contact_phone_1 = input.contactPhone1;
   if (input.contactPhone2 !== undefined) patch.contact_phone_2 = input.contactPhone2;
   if (input.isFleet !== undefined) patch.is_fleet = input.isFleet;
+  if (input.whatsapp !== undefined || input.contactPhone1 !== undefined) {
+    patch.phone_normalized = normalizeNationalPhone(input.whatsapp ?? input.contactPhone1 ?? null) || null;
+  }
 
   const { data, error } = await supabase
     .from("customers")
@@ -355,6 +360,7 @@ export async function createCustomerForTenant(input: {
       tenant_id: input.tenantId,
       name: input.name,
       whatsapp: input.whatsapp,
+      phone_normalized: normalizeNationalPhone(input.whatsapp ?? input.contactPhone1 ?? null) || null,
       legal_name: input.legalName ?? null,
       trade_name: input.tradeName ?? null,
       email: input.email ?? null,

@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { resolveAccessContext } from "@/backend/auth/access-context";
+import { getCustomerSessionTokenFromCookies, validateCustomerSession } from "@/backend/auth/customer-session";
 
 export async function requirePlatformAdmin() {
   const context = await resolveAccessContext();
@@ -58,4 +59,15 @@ export async function routeByAccessContext() {
   }
 
   redirect("/app/dashboard");
+}
+
+export async function requireCustomer() {
+  const token = await getCustomerSessionTokenFromCookies();
+  const customer = await validateCustomerSession(token);
+
+  if (!customer) {
+    redirect("/cliente/entrar");
+  }
+
+  return { token: token as string, customer };
 }

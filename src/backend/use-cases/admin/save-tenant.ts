@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/backend/auth/guards";
 import { createAuditLogAdmin } from "@/backend/repos/admin-control-repo";
 import { upsertTenantCompanyProfileAdmin } from "@/backend/repos/tenant-company-profiles-admin-repo";
@@ -69,6 +70,8 @@ export async function saveTenantByAdminUseCase(formData: FormData) {
     redirect(`/admin/tenants/${tenantId}?drawer=edit-tenant&error=${encodeURIComponent(tenantError.message)}`);
   }
 
+  const website = text(formData, "website");
+
   const companyProfileError = await upsertTenantCompanyProfileAdmin({
     tenant_id: tenantId,
     legal_name: legalName,
@@ -79,6 +82,7 @@ export async function saveTenantByAdminUseCase(formData: FormData) {
     email: companyEmail || null,
     phone: companyPhone || null,
     phone_secondary: companyPhoneSecondary || null,
+    website: website || null,
     postal_code: postalCode || null,
     street: street || null,
     street_number: streetNumber || null,
@@ -97,6 +101,11 @@ export async function saveTenantByAdminUseCase(formData: FormData) {
   if (companyProfileError) {
     redirect(`/admin/tenants/${tenantId}?drawer=edit-tenant&error=${encodeURIComponent(companyProfileError.message)}`);
   }
+
+  // cadastro atualizado: a landing pública e a tela interna refletem imediatamente
+  revalidatePath(`/verifica/${slug}`);
+  revalidatePath(`/${slug}`);
+  revalidatePath("/app/landing");
 
   await createAuditLogAdmin({
     actor_user_id: admin.userId,

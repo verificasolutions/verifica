@@ -53,3 +53,17 @@ export function getOptionalOpenAiApiKey() {
 export function getOptionalResendApiKey() {
   return getOptionalEnv("RESEND_API_KEY");
 }
+
+export function getOptionalVehicleLookupProvider() {
+  return getOptionalEnv("VEHICLE_LOOKUP_PROVIDER");
+}
+
+export function getCustomerSessionTtlHours() {
+  const value = getOptionalEnv("CUSTOMER_SESSION_TTL_HOURS");
+  const parsed = value ? Number(value) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 168;
+}
+
+export function getOptionalGoogleMapsApiKey() {
+  return getOptionalEnv("GOOGLE_MAPS_API_KEY");
+}

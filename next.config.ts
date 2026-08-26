@@ -11,6 +11,7 @@ const contentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.instagram.com",
   "connect-src 'self' https: wss:",
   "form-action 'self'",
+  "frame-src https://www.google.com https://maps.google.com",
   "upgrade-insecure-requests",
 ].join("; ");
 

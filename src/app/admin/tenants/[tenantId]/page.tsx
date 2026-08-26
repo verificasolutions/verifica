@@ -68,6 +68,7 @@ export default async function AdminTenantPreviewPage({
     municipal_registration: preview.companyProfile?.municipal_registration ?? "",
     company_email: preview.companyProfile?.email ?? "",
     company_phone: preview.companyProfile?.phone ?? "",
+    website: preview.companyProfile?.website ?? "",
     company_phone_secondary: preview.companyProfile?.phone_secondary ?? "",
     operational_profile: preview.tenant.operational_profile ?? "automotive",
     postal_code: preview.companyProfile?.postal_code ?? "",

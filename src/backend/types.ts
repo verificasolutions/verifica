@@ -83,6 +83,7 @@ export type CustomerRecord = {
   tenant_id: string;
   name: string;
   whatsapp: string | null;
+  phone_normalized?: string | null;
   legal_name?: string | null;
   trade_name?: string | null;
   email?: string | null;
@@ -113,6 +114,12 @@ export type VehicleRecord = {
   model: string;
   color: string | null;
   vehicle_type: string | null;
+  usage_type: VehicleUsageType;
+  size_tier: VehicleSizeTier | null;
+  tier_source: VehicleTierSource | null;
+  vehicle_source: VehicleSource;
+  confirmed_at: string | null;
+  last_vehicle_data_at: string | null;
   is_active: boolean;
 };
 
@@ -155,6 +162,9 @@ export type AttendanceRecord = {
   billing_mode?: "standard" | "fleet";
   billing_due_date?: string | null;
   public_code: string;
+  idempotency_key?: string | null;
+  source?: "operator" | "portal" | "appointment";
+  payment_intent_id?: string | null;
   started_at?: string | null;
   ready_at?: string | null;
   created_at: string;
@@ -369,6 +379,8 @@ export type TenantSettingsRecord = {
   instagram_default_publish_mode: "manual";
   logout_before: string | null;
   vehicle_type_tier_overrides?: Partial<Record<"hatch" | "sedan" | "wagon" | "pickup_small" | "suv" | "pickup_large" | "van" | "micro_bus" | "truck" | "bus", "passeio" | "medio" | "grande" | "bem_grande">>;
+  payment_mode?: "order_without_online_payment" | "online_required";
+  portal_payment_methods?: string[];
 };
 
 export type TenantInstagramAccountRecord = {
@@ -535,6 +547,7 @@ export type AuditLogRecord = {
   actor_email: string | null;
   actor_role: string;
   tenant_id: string | null;
+  actor_customer_id?: string | null;
   action: string;
   entity_type: string;
   entity_id: string | null;
@@ -688,6 +701,7 @@ export type TenantCompanyProfileRecord = {
   email: string | null;
   phone: string | null;
   phone_secondary: string | null;
+  website?: string | null;
   postal_code: string | null;
   street: string | null;
   street_number: string | null;
@@ -820,3 +834,215 @@ export type AccessContext =
       tenant: TenantRecord;
       profile: ProfileRecord | null;
     };
+
+export type VehicleUsageType = "particular" | "app_driver" | "taxi" | "company" | "other_professional";
+export type VehicleSizeTier = "passeio" | "medio" | "grande" | "bem_grande";
+export type VehicleTierSource = "engine" | "lookup" | "manual";
+export type VehicleSource = "operator" | "portal" | "lookup";
+export type CustomerPaymentMode = "order_without_online_payment" | "online_required";
+export type PaymentIntentStatus = "not_required" | "pending" | "succeeded" | "failed" | "refunded" | "canceled";
+
+export type CustomerCredentialRecord = {
+  customer_id: string;
+  tenant_id: string;
+  password_hash: string;
+  failed_attempts: number;
+  locked_until: string | null;
+  password_changed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerSessionRecord = {
+  id: string;
+  customer_id: string;
+  tenant_id: string;
+  token_hash: string;
+  expires_at: string;
+  revoked_at: string | null;
+  last_seen_at: string;
+  created_at: string;
+  created_ip: string | null;
+  user_agent: string | null;
+};
+
+export type RateLimitRecord = {
+  key: string;
+  count: number;
+  reset_at: string;
+};
+
+export type LoyaltyProgramRecord = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  washes_required: number;
+  reward_type: string;
+  eligibility_rule: "concluded" | "concluded_and_paid";
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LoyaltyEntryRecord = {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  vehicle_id: string;
+  attendance_id: string | null;
+  kind: "wash" | "adjustment" | "reversal";
+  wash_number: number;
+  cycle_started_at: string;
+  event_date: string;
+  source: "attendance_delivered" | "portal" | "operator" | "system";
+  actor_customer_id: string | null;
+  actor_user_id: string | null;
+  reversal_reason: string | null;
+  idempotency_key: string;
+  created_at: string;
+};
+
+export type LoyaltyRewardRecord = {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  vehicle_id: string;
+  entry_id: string;
+  status: "generated" | "available" | "used" | "reverted" | "canceled";
+  used_attendance_id: string | null;
+  used_at: string | null;
+  reverted_at: string | null;
+  canceled_at: string | null;
+  cancel_reason: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AppointmentItemRecord = {
+  id: string;
+  tenant_id: string;
+  appointment_id: string;
+  service_id: string | null;
+  name: string;
+  unit_price: number;
+  estimated_minutes: number | null;
+  sort_order: number;
+  is_primary: boolean;
+  created_at: string;
+};
+
+export type PaymentIntentRecord = {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  attendance_id: string | null;
+  amount: number;
+  status: PaymentIntentStatus;
+  payment_method: "pix" | "card" | "cash" | "other" | null;
+  provider: string | null;
+  provider_reference: string | null;
+  idempotency_key: string;
+  succeeded_at: string | null;
+  failed_at: string | null;
+  refunded_at: string | null;
+  canceled_at: string | null;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  created_ip: string | null;
+};
+
+export type EntryTokenRecord = {
+  id: string;
+  tenant_id: string;
+  phone_normalized: string;
+  plate_normalized: string;
+  purpose: "entry";
+  token_hash: string;
+  expires_at: string;
+  consumed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderDraftRecord = {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  vehicle_id: string;
+  kind: "order" | "appointment";
+  service_ids: string[];
+  reward_id: string | null;
+  idempotency_key: string;
+  session_token_hash: string;
+  status: "open" | "used" | "expired";
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerOrderSummary = {
+  id: string;
+  tenant_id: string;
+  vehicle_id: string;
+  status: string;
+  public_code: string;
+  estimated_minutes: number | null;
+  created_at: string;
+  service_summary: string;
+};
+
+export type CustomerRegisterResult = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  phone_normalized: string;
+};
+
+export type CustomerCatalogService = {
+  id: string;
+  name: string;
+  short_description: string | null;
+  kind: "main" | "extra";
+  base_service_id: string | null;
+  sort_order: number;
+  price: number;
+  price_passeio: number;
+  price_medio: number;
+  price_grande: number;
+  price_bem_grande: number;
+  price_app_passeio: number;
+  price_app_medio: number;
+  price_app_grande: number;
+  price_app_bem_grande: number;
+  addon_price_passeio: number;
+  addon_price_medio: number;
+  addon_price_grande: number;
+  addon_price_bem_grande: number;
+  addon_price_app_passeio: number;
+  addon_price_app_medio: number;
+  addon_price_app_grande: number;
+  addon_price_app_bem_grande: number;
+  minutes_passeio: number | null;
+  minutes_medio: number | null;
+  minutes_grande: number | null;
+  minutes_bem_grande: number | null;
+  addon_minutes: number;
+  addon_minutes_passeio: number | null;
+  addon_minutes_medio: number | null;
+  addon_minutes_grande: number | null;
+  addon_minutes_bem_grande: number | null;
+  average_minutes: number;
+};
+
+export type CustomerLoyaltySummary = {
+  program_id: string;
+  washes_required: number;
+  washes_completed: number;
+  reward_id: string | null;
+  reward_status: string | null;
+  reward_used_at: string | null;
+  cycle_started_at: string | null;
+};

@@ -17,17 +17,12 @@ export async function getTenantLandingPage(tenantId: string) {
 export async function upsertTenantLandingPage(input: {
   tenantId: string;
   category: string | null;
-  cityLabel: string | null;
   bio: string | null;
   backgroundStyle: TenantLandingPageRecord["background_style"];
   coverImageUrl: string | null;
   profileImageUrl: string | null;
-  contactEmail: string | null;
   instagramUrl: string | null;
   facebookUrl: string | null;
-  websiteUrl: string | null;
-  addressLabel: string | null;
-  mapEmbedUrl: string | null;
   openingHours: string | null;
   ctaWhatsappMessage: string | null;
   isPublished: boolean;
@@ -36,17 +31,19 @@ export async function upsertTenantLandingPage(input: {
   const { error } = await supabase.from("tenant_landing_pages").upsert({
     tenant_id: input.tenantId,
     category: input.category,
-    city_label: input.cityLabel,
+    // Fonte única: nome/telefone/e-mail/endereço/CEP/cidade/estado/site vêm do cadastro;
+    // a landing NÃO persiste overrides (campos legados zerados).
+    city_label: null,
+    contact_email: null,
+    website_url: null,
+    address_label: null,
+    map_embed_url: null,
     bio: input.bio,
     background_style: input.backgroundStyle,
     cover_image_url: input.coverImageUrl,
     profile_image_url: input.profileImageUrl,
-    contact_email: input.contactEmail,
     instagram_url: input.instagramUrl,
     facebook_url: input.facebookUrl,
-    website_url: input.websiteUrl,
-    address_label: input.addressLabel,
-    map_embed_url: input.mapEmbedUrl,
     opening_hours: input.openingHours,
     cta_whatsapp_message: input.ctaWhatsappMessage,
     is_published: input.isPublished,

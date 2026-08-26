@@ -130,6 +130,7 @@ export async function createAppointmentForTenant(input: {
   serviceId: string | null;
   scheduledFor: string;
   notes: string | null;
+  totalPrice?: number;
 }) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("appointments").insert({
@@ -139,6 +140,7 @@ export async function createAppointmentForTenant(input: {
     service_id: input.serviceId,
     scheduled_for: input.scheduledFor,
     notes: input.notes,
+    total_price: input.totalPrice ?? 0,
     status: "scheduled",
   });
 

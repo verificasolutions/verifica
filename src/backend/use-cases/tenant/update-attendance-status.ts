@@ -13,6 +13,7 @@ import { resolveAttendancePrimaryServiceName } from "@/backend/shared/attendance
 import { resolvePostWashStatus } from "@/backend/shared/service-flow";
 import { isTenantMessageStageEnabled } from "@/backend/shared/tenant-whatsapp-messages";
 import { formatVehicleDisplayLabel } from "@/backend/shared/vehicle-catalog";
+import { awardLoyaltyWashForOrderUseCase } from "@/backend/use-cases/customer/award-loyalty";
 
 const stepIndexByStatus = {
   waiting: 2,
@@ -68,6 +69,20 @@ export async function updateAttendanceStatusUseCase(formData: FormData) {
     etaMinutes: updated.data.estimated_minutes ?? 0,
     stepIndex: stepIndexByStatus[status],
   });
+
+  // Fidelidade SOMENTE após conclusão (delivered), por veículo/ciclo, transacional e idempotente.
+  // A RPC award_loyalty_wash concede na mesma transação; falha não bloqueia a entrega
+  // (idempotente — pode ser reexecutada) e é registrada para diagnóstico.
+  if (status === "delivered") {
+    try {
+      await awardLoyaltyWashForOrderUseCase({ attendanceId: updated.data.id });
+    } catch (error) {
+      console.error("Falha ao conceder fidelidade na entrega", {
+        attendanceId: updated.data.id,
+        reason: error instanceof Error ? error.message : "desconhecido",
+      });
+    }
+  }
 
   const detail = await getAttendanceDetailById(updated.data.id);
   if (!detail?.customers?.whatsapp) {

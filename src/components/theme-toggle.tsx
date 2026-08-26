@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
 type ThemeMode = "dark" | "light";
 
@@ -16,6 +17,8 @@ export function ThemeToggle() {
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(STORAGE_KEY);
     const nextTheme: ThemeMode = storedTheme === "light" ? "light" : "dark";
+    // A preferência só existe no navegador; o estado inicial precisa permanecer compatível com SSR.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(nextTheme);
     applyTheme(nextTheme);
   }, []);
@@ -26,33 +29,16 @@ export function ThemeToggle() {
     applyTheme(nextTheme);
   }
 
+  const Icon = theme === "dark" ? Sun : Moon;
   return (
-    <div className="mt-3 rounded-[18px] border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] p-2">
-      <p className="px-2 text-[10px] uppercase tracking-[0.28em] text-[color:var(--text-soft)]">Tema</p>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => changeTheme("dark")}
-          className={`flex min-h-9 items-center justify-center rounded-xl border px-3 text-sm font-medium transition ${
-            theme === "dark"
-              ? "border-[var(--accent)] bg-[linear-gradient(135deg,rgba(0,245,212,0.18),rgba(56,189,248,0.08))] text-[color:var(--text-primary)]"
-              : "border-[color:var(--surface-border)] bg-transparent text-[color:var(--text-secondary)]"
-          }`}
-        >
-          Escuro
-        </button>
-        <button
-          type="button"
-          onClick={() => changeTheme("light")}
-          className={`flex min-h-9 items-center justify-center rounded-xl border px-3 text-sm font-medium transition ${
-            theme === "light"
-              ? "border-[var(--accent)] bg-[linear-gradient(135deg,rgba(11,216,194,0.18),rgba(56,189,248,0.08))] text-[color:var(--text-primary)]"
-              : "border-[color:var(--surface-border)] bg-transparent text-[color:var(--text-secondary)]"
-          }`}
-        >
-          Claro
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={() => changeTheme(theme === "dark" ? "light" : "dark")}
+      aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+      title={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] text-[color:var(--text-primary)] transition hover:brightness-110"
+    >
+      <Icon aria-hidden="true" size={18} />
+    </button>
   );
 }

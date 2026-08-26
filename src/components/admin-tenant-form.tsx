@@ -37,6 +37,7 @@ type TenantFormValues = {
   company_email?: string | null;
   company_phone?: string | null;
   company_phone_secondary?: string | null;
+  website?: string | null;
   operational_profile?: "automotive" | "generic" | null;
   postal_code?: string | null;
   street?: string | null;
@@ -95,7 +96,8 @@ export function AdminTenantForm({
     if (digits.length !== 8) return;
 
     let cancelled = false;
-    setLoadingAddress(true);
+    // evita setState síncrono no corpo do effect (regra react-hooks)
+    queueMicrotask(() => setLoadingAddress(true));
 
     fetch(`https://viacep.com.br/ws/${digits}/json/`)
       .then((response) => response.json() as Promise<ViaCepResponse>)
@@ -138,6 +140,7 @@ export function AdminTenantForm({
           <input name="municipal_registration" value={municipalRegistration} onChange={(event) => setMunicipalRegistration(formatRegistration(event.target.value))} placeholder="Inscrição municipal" className={inputClassName} />
         </div>
         <input name="company_email" type="email" defaultValue={values?.company_email ?? ""} placeholder="E-mail da empresa" className={inputClassName} spellCheck={false} />
+        <input name="website" defaultValue={values?.website ?? ""} placeholder="Site da empresa" className={inputClassName} spellCheck={false} />
         <div className="grid gap-3 xl:grid-cols-2">
           <PhoneInput name="company_phone" defaultValue={values?.company_phone ?? ""} placeholder="Telefone principal" className={inputClassName} />
           <PhoneInput name="company_phone_secondary" defaultValue={values?.company_phone_secondary ?? ""} placeholder="Telefone adicional" className={inputClassName} />

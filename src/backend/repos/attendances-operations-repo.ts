@@ -106,6 +106,9 @@ export async function createAttendanceForTenant(input: {
   notifyCustomer: boolean;
   billingMode?: "standard" | "fleet";
   billingDueDate?: string | null;
+  idempotencyKey?: string | null;
+  source?: "operator" | "portal" | "appointment";
+  paymentIntentId?: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -125,8 +128,11 @@ export async function createAttendanceForTenant(input: {
       billing_mode: input.billingMode ?? "standard",
       billing_due_date: input.billingDueDate ?? null,
       notify_customer: input.notifyCustomer,
+      idempotency_key: input.idempotencyKey ?? null,
+      source: input.source ?? "operator",
+      payment_intent_id: input.paymentIntentId ?? null,
     })
-    .select("id, tenant_id, customer_id, vehicle_id, service_id, service_label, employee_id, status, estimated_minutes, extra_minutes, current_box_id, queue_position, operational_stage, final_price, payment_method, billing_mode, billing_due_date, public_code, started_at, ready_at, created_at")
+    .select("id, tenant_id, customer_id, vehicle_id, service_id, service_label, employee_id, status, estimated_minutes, extra_minutes, current_box_id, queue_position, operational_stage, final_price, payment_method, billing_mode, billing_due_date, public_code, idempotency_key, source, payment_intent_id, started_at, ready_at, created_at")
     .single();
 
   return { data: (data as AttendanceRecord | null) ?? null, error: error as { message: string } | null };

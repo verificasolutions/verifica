@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -15,7 +16,7 @@ const tenantSettingsSelect = `
   operations_mode, operation_flow_locked, tv_mode_enabled, require_ready_photo, allow_step_photos,
   landing_enabled,
   instagram_enabled, instagram_auto_publish_enabled, instagram_default_publish_mode,
-  logout_before, vehicle_type_tier_overrides
+  logout_before, vehicle_type_tier_overrides, payment_mode, portal_payment_methods
 `;
 
 export async function getTenantSettings(tenantId: string) {

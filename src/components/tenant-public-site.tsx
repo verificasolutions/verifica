@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import type { CSSProperties } from "react";
-import { getPublicTenantSiteBySlug } from "@/backend/repos/public-tenant-site-repo";
-import { buildGoogleMapsEmbedUrl, buildTenantAddressLabel } from "@/backend/shared/tenant-location";
+import { getPublicTenantSiteCritical, getPublicTenantSiteSecondary } from "@/backend/repos/public-tenant-site-repo";
+import { LandingGalleryDrawer } from "@/components/landing/gallery-drawer";
+import { LandingPostCarousel } from "@/components/landing/post-carousel";
+import { LandingImage } from "@/components/landing/landing-image";
+import { deriveLandingTimeline } from "@/backend/shared/landing-timeline";
+import { buildGoogleMapsDirectionsLink, buildGoogleMapsEmbedUrl } from "@/backend/shared/tenant-location";
+import { getOptionalGoogleMapsApiKey } from "@/lib/env";
+import { LANDING_CARD_GRADIENT, LANDING_SECTION_GRADIENT } from "@/components/landing/visual-tokens";
 
 function digitsOnly(value: string | null | undefined) {
   return (value ?? "").replace(/\D/g, "");
@@ -45,6 +52,25 @@ function formatCurrency(value: number) {
     currency: "BRL",
   }).format(value);
 }
+
+type PublicPost = {
+  id: string;
+  title: string;
+  caption: string;
+  createdAt: string;
+  cta?: string | null;
+  imageUrl?: string | null;
+  images?: string[];
+  likeCount?: number;
+  comments?: Array<{ id: string; author_name: string; body: string; created_at: string }>;
+};
+
+type PublicReview = {
+  id: string;
+  customerName: string;
+  rating: number;
+  quote: string;
+};
 
 function encodeSvg(svg: string) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -106,8 +132,8 @@ function buildLandingBackgroundStyle(input: {
 
   if (input.backgroundStyle === "black") {
     return {
-      backgroundColor: "#05070b",
-      backgroundImage: "linear-gradient(180deg, rgba(7,9,13,1), rgba(10,13,18,1))",
+      backgroundColor: "#eef7f5",
+      backgroundImage: "linear-gradient(180deg, rgba(238,247,245,1), rgba(224,240,236,1))",
     };
   }
 
@@ -215,13 +241,13 @@ function buildLandingBackgroundStyle(input: {
   }
 
   return {
-    backgroundColor: "#0a0f15",
-    backgroundImage: "linear-gradient(180deg, rgba(10,15,21,1), rgba(8,11,17,1))",
+    backgroundColor: "#eef7f5",
+    backgroundImage: "linear-gradient(180deg, rgba(238,247,245,1), rgba(224,240,236,1))",
   };
 }
 
 export async function getTenantPublicSite(slug: string) {
-  return getPublicTenantSiteBySlug(slug);
+  return getPublicTenantSiteCritical(slug);
 }
 
 export async function buildTenantPublicMetadata(slug: string, origin: string): Promise<Metadata | null> {
@@ -230,12 +256,12 @@ export async function buildTenantPublicMetadata(slug: string, origin: string): P
     return null;
   }
 
-  const companyName = site.companyProfile?.trade_name ?? site.tenant.name;
+  const companyName = site.singleSource.displayName;
   const description =
     site.landing?.bio?.trim() ||
-    `${companyName} em ${site.landing?.city_label ?? site.companyProfile?.city ?? "sua região"}. Serviços automotivos, publicações reais e atendimento direto no WhatsApp.`;
+    `${companyName} em ${site.singleSource.cityLabel ?? "sua região"}. Serviços automotivos, publicações reais e atendimento direto no WhatsApp.`;
   const url = `${origin.replace(/\/+$/, "")}/${slug}`;
-  const image = site.landing?.cover_image_url ?? site.landing?.profile_image_url ?? site.posts[0]?.imageUrl ?? null;
+  const image = site.landing?.cover_image_url ?? site.landing?.profile_image_url ?? null;
 
   return {
     title: `${companyName} | Verifica Solutions`,
@@ -261,6 +287,161 @@ export async function buildTenantPublicMetadata(slug: string, origin: string): P
   };
 }
 
+function LandingSectionsSkeleton() {
+  return (
+    <>
+      <section className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+        <div className="h-4 w-44 animate-pulse rounded bg-black/10" />
+        <div className="mt-3 h-8 w-72 animate-pulse rounded bg-black/10" />
+        <div className="mt-6 aspect-square w-full max-w-2xl animate-pulse rounded-[26px] bg-black/10" />
+      </section>
+      <section className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+        <div className="h-4 w-40 animate-pulse rounded bg-black/10" />
+        <div className="mt-3 h-8 w-72 animate-pulse rounded bg-black/10" />
+        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="aspect-square animate-pulse rounded-[20px] bg-black/10" />
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+async function DeferredLandingSections({ slug }: { slug: string }) {
+  const secondary = await getPublicTenantSiteSecondary(slug);
+  if (!secondary) {
+    return null;
+  }
+
+  const posts = secondary.posts ?? [];
+  const reviews = secondary.reviews ?? [];
+  const beforeAfter = secondary.beforeAfter ?? [];
+  const timeline = deriveLandingTimeline(posts);
+
+  return (
+    <>
+      {beforeAfter.length > 0 ? (
+        <section id="antes-depois" className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+          <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Antes e depois</p>
+          <h2 className="mt-2 text-3xl font-semibold text-landing-text">Transformações reais</h2>
+          <div className="mt-6 space-y-6">
+            {beforeAfter.map((item: { id: string; title: string; caption: string; beforeUrl?: string | null; afterUrl?: string | null }) => (
+              <article key={item.id} className={`rounded-[24px] border border-black/10 ${LANDING_CARD_GRADIENT} p-4`}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="overflow-hidden rounded-[20px] border border-black/10 bg-[#0d1218]">
+                    {item.beforeUrl ? (
+                      <LandingImage
+                        src={item.beforeUrl}
+                        alt={`Antes ${item.title}`}
+                        width={960}
+                        height={720}
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="overflow-hidden rounded-[20px] border border-black/10 bg-[#0d1218]">
+                    {item.afterUrl ? (
+                      <LandingImage
+                        src={item.afterUrl}
+                        alt={`Depois ${item.title}`}
+                        width={960}
+                        height={720}
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <p className="mt-4 text-lg font-semibold text-landing-text">{item.title}</p>
+                <p className="mt-2 text-sm leading-6 text-landing-text">{item.caption}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section id="feed" className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+        <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Publicações</p>
+        <h2 className="mt-2 text-3xl font-semibold text-landing-text">Feed da operação</h2>
+
+        <div className="mx-auto mt-6 flex max-w-2xl flex-col gap-6">
+          {timeline.feed.map((post: PublicPost) => (
+            <LandingPostCarousel
+              key={post.id}
+              anchorId={`post-${post.id}`}
+              postId={post.id}
+              title={post.title}
+              caption={post.caption}
+              dateLabel={formatDateLabel(post.createdAt)}
+              cta={post.cta}
+              images={post.images ?? []}
+              initialLikeCount={post.likeCount ?? 0}
+              comments={post.comments ?? []}
+            />
+          ))}
+          {posts.length === 0 ? (
+            <p className="text-center text-sm text-landing-text">Publicações aprovadas aparecerão aqui.</p>
+          ) : null}
+        </div>
+      </section>
+
+      <section id="galeria" className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+        <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Galeria</p>
+        <h2 className="mt-2 text-3xl font-semibold text-landing-text">Fotos da operação</h2>
+        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {timeline.gallery.map((post: PublicPost) => (
+            <a
+              key={post.id}
+              href={`#post-${post.id}`}
+              className={`group overflow-hidden rounded-[20px] border border-black/10 ${LANDING_CARD_GRADIENT}`}
+            >
+              {post.imageUrl ? (
+                <LandingImage
+                  src={post.imageUrl}
+                  alt={post.title}
+                  width={640}
+                  height={640}
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                  className="aspect-square h-full w-full object-cover transition group-hover:brightness-110"
+                />
+              ) : null}
+              <p className="line-clamp-2 p-3 text-sm text-landing-text">{post.title}</p>
+            </a>
+          ))}
+        </div>
+        {posts.length > 8 ? (
+          <div className="mt-4">
+            <LandingGalleryDrawer
+              images={timeline.drawer.map((post) => ({ id: post.id, url: post.imageUrl ?? "", title: post.title }))}
+              triggerLabel="Ver todas"
+            />
+          </div>
+        ) : null}
+        {posts.length === 0 ? (
+          <p className="mt-3 text-center text-sm text-landing-text">As publicações aprovadas aparecerão aqui.</p>
+        ) : null}
+      </section>
+
+      <section id="avaliacoes" className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+        <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Avaliações</p>
+        <h2 className="mt-2 text-3xl font-semibold text-landing-text">Clientes falando da experiência</h2>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {reviews.map((review: PublicReview) => (
+            <article key={review.id} className={`rounded-[24px] border border-black/10 ${LANDING_CARD_GRADIENT} p-5`}>
+              <p className="text-sm text-landing-text">{"★".repeat(review.rating)}</p>
+              <p className="mt-4 text-base leading-7 text-landing-text">“{review.quote}”</p>
+              <p className="mt-5 text-sm font-semibold text-landing-text">{review.customerName}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export async function TenantPublicSite({ slug, origin }: { slug: string; origin: string }) {
   const site = await getTenantPublicSite(slug);
 
@@ -268,12 +449,15 @@ export async function TenantPublicSite({ slug, origin }: { slug: string; origin:
     return null;
   }
 
-  const companyName = site.companyProfile?.trade_name ?? site.tenant.name;
-  const cityLabel = site.landing?.city_label ?? [site.companyProfile?.city, site.companyProfile?.state].filter(Boolean).join(" - ");
-  const resolvedAddressLabel = site.landing?.address_label ?? buildTenantAddressLabel(site.companyProfile);
-  const resolvedMapEmbedUrl = site.landing?.map_embed_url ?? buildGoogleMapsEmbedUrl(resolvedAddressLabel);
-  const contactEmail = site.landing?.contact_email ?? site.companyProfile?.email ?? null;
-  const whatsapp = site.companyProfile?.phone ?? site.companyProfile?.phone_secondary ?? site.tenant.whatsapp;
+  const companyName = site.singleSource.displayName;
+  const cityLabel = site.singleSource.cityLabel;
+  const resolvedAddressLabel = site.singleSource.addressLabel;
+  const mapsApiKey = getOptionalGoogleMapsApiKey();
+  const resolvedMapEmbedUrl = buildGoogleMapsEmbedUrl(resolvedAddressLabel, mapsApiKey);
+  const mapsLink = buildGoogleMapsDirectionsLink(resolvedAddressLabel);
+  const contactEmail = site.singleSource.email;
+  const website = site.singleSource.website;
+  const whatsapp = site.singleSource.phone;
   const whatsappUrl = buildWhatsappUrl(whatsapp, site.landing?.cta_whatsapp_message);
   const callHref = whatsapp ? `tel:${digitsOnly(whatsapp)}` : null;
   const canonicalUrl = `${origin.replace(/\/+$/, "")}/${slug}`;
@@ -299,71 +483,91 @@ export async function TenantPublicSite({ slug, origin }: { slug: string; origin:
     description: site.landing?.bio ?? undefined,
     telephone: whatsapp ?? undefined,
     image: [site.landing?.cover_image_url, site.landing?.profile_image_url].filter(Boolean),
-    address: site.landing?.address_label ?? undefined,
+    address: resolvedAddressLabel ?? undefined,
     areaServed: cityLabel || undefined,
     url: canonicalUrl,
   };
 
   return (
-    <main className="min-h-screen text-white" style={pageBackgroundStyle}>
+    <main className="min-h-screen text-landing-text" style={pageBackgroundStyle}>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
 
-      <section className="border-b border-white/10">
+      <section className="border-b border-black/10">
         <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
           <div
-            className="min-h-[300px] rounded-[34px] border border-white/10 sm:min-h-[380px] lg:min-h-[460px]"
+            className="relative min-h-[300px] overflow-hidden rounded-[34px] border border-black/10 sm:min-h-[380px] lg:min-h-[460px]"
             style={{
-              backgroundImage: site.landing?.cover_image_url
-                ? `url(${site.landing.cover_image_url})`
-                : "radial-gradient(circle at top left, rgba(0,245,212,0.20), transparent 28%), linear-gradient(180deg, rgba(10,15,21,1), rgba(8,11,17,1))",
-              backgroundSize: site.landing?.cover_image_url ? "contain" : "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
+              backgroundImage:
+                "radial-gradient(circle at top left, rgba(0,245,212,0.20), transparent 28%), linear-gradient(180deg, rgba(10,15,21,1), rgba(8,11,17,1))",
               backgroundColor: "#081018",
             }}
-          />
+          >
+            {site.landing?.cover_image_url ? (
+              // capa é LCP: eager + alta prioridade, dimensões estáveis (min-h fixo) e fallback do gradiente atrás
+              <LandingImage
+                src={site.landing.cover_image_url}
+                alt={`Capa ${companyName}`}
+                fill
+                sizes="(min-width: 1024px) 1152px, (min-width: 640px) calc(100vw - 3rem), calc(100vw - 2rem)"
+                priority
+                className="object-contain"
+              />
+            ) : null}
+          </div>
         </div>
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="rounded-[30px] border border-white/10 bg-[#11161d] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+        <div className={`rounded-[30px] border border-black/10 ${LANDING_CARD_GRADIENT} p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28)]`}>
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
-              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_16px_42px_rgba(0,0,0,0.3)]">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[28px] border border-black/15 bg-black/8 shadow-[0_16px_42px_rgba(0,0,0,0.3)]">
                 {site.landing?.profile_image_url ? (
-                  <img src={site.landing.profile_image_url} alt={companyName} className="h-full w-full object-cover" />
+                  <LandingImage
+                    src={site.landing.profile_image_url}
+                    alt={companyName}
+                    width={112}
+                    height={112}
+                    sizes="112px"
+                    priority
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <span className="text-4xl font-semibold text-white/88">{companyName.slice(0, 1).toUpperCase()}</span>
+                  <span className="text-4xl font-semibold text-landing-text">{companyName.slice(0, 1).toUpperCase()}</span>
                 )}
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.34em] text-[var(--accent)]">Perfil público</p>
-                <h1 className="mt-3 text-4xl font-semibold text-white sm:text-5xl">{companyName}</h1>
-                {site.landing?.category ? <p className="mt-3 text-lg text-white/82">{site.landing.category}</p> : null}
-                {cityLabel ? <p className="mt-1 text-sm text-white/60">{cityLabel}</p> : null}
-                {site.landing?.bio ? <p className="mt-4 max-w-2xl text-sm leading-7 text-white/72">{site.landing.bio}</p> : null}
+                <h1 className="mt-3 text-4xl font-semibold text-landing-text sm:text-5xl">{companyName}</h1>
+                {site.landing?.category ? <p className="mt-3 text-lg text-landing-text">{site.landing.category}</p> : null}
+                {cityLabel ? <p className="mt-1 text-sm text-landing-text">{cityLabel}</p> : null}
+                {site.landing?.bio ? <p className="mt-4 max-w-2xl text-sm leading-7 text-landing-text">{site.landing.bio}</p> : null}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex w-full flex-col gap-3 sm:max-w-[300px]">
               {whatsappUrl ? (
-                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent)] px-5 text-sm font-semibold text-slate-950">
+                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-5 text-sm font-semibold text-landing-text">
                   WhatsApp
                 </a>
               ) : null}
               {callHref ? (
-                <a href={callHref} className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white/84">
+                <a href={callHref} className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-5 text-sm font-semibold text-landing-text">
                   Ligar
                 </a>
               ) : null}
               {site.landing?.instagram_url ? (
-                <a href={site.landing.instagram_url} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white/84">
+                <a href={site.landing.instagram_url} target="_blank" rel="noreferrer" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-5 text-sm font-semibold text-landing-text">
                   Instagram
                 </a>
               ) : null}
               {resolvedAddressLabel ? (
-                <a href="#informacoes" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white/84">
+                <a href="#informacoes" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-5 text-sm font-semibold text-landing-text">
                   Localização
+                </a>
+              ) : null}
+              {website ? (
+                <a href={website} target="_blank" rel="noreferrer" className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-5 text-sm font-semibold text-landing-text">
+                  Site
                 </a>
               ) : null}
             </div>
@@ -372,28 +576,28 @@ export async function TenantPublicSite({ slug, origin }: { slug: string; origin:
       </section>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/42">Destaques</p>
+        <section className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+          <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Destaques</p>
           <div className="mt-5 grid gap-4 grid-cols-3 sm:grid-cols-6">
             {highlightItems.map((item) => (
               <a key={item.id} href={`#${item.id}`} className="group flex flex-col items-center gap-3 text-center">
-                <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_top,rgba(0,245,212,0.2),rgba(255,255,255,0.04))] text-xs font-semibold text-white transition group-hover:border-[var(--accent)]">
+                <span className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#063b66] bg-[linear-gradient(180deg,#0b5fa5,#063b66)] text-xs font-semibold text-white transition group-hover:border-[var(--accent)]">
                   {item.label.slice(0, 2).toUpperCase()}
                 </span>
-                <span className="text-xs text-white/70">{item.label}</span>
+                <span className="text-xs text-landing-text">{item.label}</span>
               </a>
             ))}
           </div>
         </section>
 
-        <section id="servicos" className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
+        <section id="servicos" className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/42">Serviços</p>
-              <h2 className="mt-2 text-3xl font-semibold text-white">O que fazemos</h2>
+              <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Serviços</p>
+              <h2 className="mt-2 text-3xl font-semibold text-landing-text">O que fazemos</h2>
             </div>
             {whatsappUrl ? (
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/82">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-black/10 bg-black/5 px-4 py-2 text-sm text-landing-text">
                 Solicitar orçamento
               </a>
             ) : null}
@@ -401,110 +605,35 @@ export async function TenantPublicSite({ slug, origin }: { slug: string; origin:
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {site.services.map((service) => (
-              <article key={service.id} className="rounded-[24px] border border-white/10 bg-black/18 p-5">
-                <p className="text-lg font-semibold text-white">{service.name}</p>
-                <p className="mt-2 text-sm leading-6 text-white/60">{service.shortDescription ?? "Serviço configurado dentro da operação do tenant."}</p>
-                <p className="mt-4 text-sm font-semibold text-[var(--accent)]">A partir de {formatCurrency(service.startingPrice)}</p>
+              <article key={service.id} className={`rounded-[24px] border border-black/10 ${LANDING_CARD_GRADIENT} p-5`}>
+                <p className="text-lg font-semibold text-landing-text">{service.name}</p>
+                <p className="mt-2 text-sm leading-6 text-landing-text">{service.shortDescription ?? "Serviço configurado dentro da operação do tenant."}</p>
+                <p className="mt-4 text-sm font-semibold text-landing-text">A partir de {formatCurrency(service.startingPrice)}</p>
               </article>
             ))}
           </div>
         </section>
 
-        {site.beforeAfter.length > 0 ? (
-          <section id="antes-depois" className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/42">Antes e depois</p>
-            <h2 className="mt-2 text-3xl font-semibold text-white">Transformações reais</h2>
-            <div className="mt-6 space-y-6">
-              {site.beforeAfter.map((item: any) => (
-                <article key={item.id} className="rounded-[24px] border border-white/10 bg-black/18 p-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="overflow-hidden rounded-[20px] border border-white/10 bg-[#0d1218]">
-                      {item.beforeUrl ? <img src={item.beforeUrl} alt={`Antes ${item.title}`} className="h-full w-full object-contain" /> : null}
-                    </div>
-                    <div className="overflow-hidden rounded-[20px] border border-white/10 bg-[#0d1218]">
-                      {item.afterUrl ? <img src={item.afterUrl} alt={`Depois ${item.title}`} className="h-full w-full object-contain" /> : null}
-                    </div>
-                  </div>
-                  <p className="mt-4 text-lg font-semibold text-white">{item.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-white/66">{item.caption}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section id="feed" className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/42">Publicações</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">Feed da operação</h2>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            {site.posts.map((post: any) => (
-                <article key={post.id} className="overflow-hidden rounded-[26px] border border-white/10 bg-black/18">
-                <div className="flex aspect-[1.1/1] items-center justify-center bg-[#0d1218] p-3">
-                  {post.imageUrl ? <img src={post.imageUrl} alt={post.title} className="h-full w-full rounded-[20px] object-contain" /> : null}
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-lg font-semibold text-white">{post.title}</p>
-                    <span className="text-xs text-white/48">{formatDateLabel(post.createdAt)}</span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-white/68">{post.caption}</p>
-                  {post.cta ? <p className="mt-4 text-sm font-semibold text-[var(--accent)]">{post.cta}</p> : null}
-                  {whatsappUrl ? (
-                    <div className="mt-5">
-                      <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white/84">
-                        Solicitar serviço
-                      </a>
-                    </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="galeria" className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/42">Galeria</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">Fotos da operação</h2>
-          <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {site.posts.filter((post: any) => post.imageUrl).map((post: any) => (
-                <div key={`gallery-${post.id}`} className="overflow-hidden rounded-[20px] border border-white/10 bg-[#0d1218]">
-                <img src={post.imageUrl} alt={post.title} className="aspect-square h-full w-full object-contain" />
-                </div>
-            ))}
-          </div>
-        </section>
-
-        <section id="avaliacoes" className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/42">Avaliações</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">Clientes falando da experiência</h2>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {site.reviews.map((review: any) => (
-              <article key={review.id} className="rounded-[24px] border border-white/10 bg-black/18 p-5">
-                <p className="text-sm text-amber-200">{"★".repeat(review.rating)}</p>
-                <p className="mt-4 text-base leading-7 text-white/78">"{review.quote}"</p>
-                <p className="mt-5 text-sm font-semibold text-white">{review.customerName}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        <Suspense fallback={<LandingSectionsSkeleton />}>
+          {/* feed, galeria, antes/depois e avaliações NÃO bloqueiam o hero/perfil (streaming) */}
+          <DeferredLandingSections slug={slug} />
+        </Suspense>
 
         <section id="informacoes" className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[28px] border border-white/10 bg-[#11161d] p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/42">Informações</p>
-            <h2 className="mt-2 text-3xl font-semibold text-white">Contato</h2>
-            <div className="mt-6 space-y-4 text-sm text-white/72">
-              {whatsapp ? <p><span className="text-white">WhatsApp:</span> {formatPhone(whatsapp)}</p> : null}
+          <div className={`rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-6`}>
+            <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Informações</p>
+            <h2 className="mt-2 text-3xl font-semibold text-landing-text">Contato</h2>
+            <div className="mt-6 space-y-4 text-sm text-landing-text">
+              {whatsapp ? <p><span className="text-landing-text">WhatsApp:</span> {formatPhone(whatsapp)}</p> : null}
               {whatsappUrl ? (
-                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent)] px-5 text-sm font-semibold text-slate-950">
+                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent)] px-5 text-sm font-semibold text-landing-text">
                   Chamar no WhatsApp
                 </a>
               ) : null}
-              {contactEmail ? <p><span className="text-white">E-mail:</span> {contactEmail}</p> : null}
+              {contactEmail ? <p><span className="text-landing-text">E-mail:</span> {contactEmail}</p> : null}
               {parseOpeningHoursList(site.landing?.opening_hours).length > 0 ? (
                 <div>
-                  <p><span className="text-white">Horário:</span></p>
+                  <p><span className="text-landing-text">Horário:</span></p>
                   <div className="mt-2 space-y-1">
                     {parseOpeningHoursList(site.landing?.opening_hours).map((line) => (
                       <p key={line}>{line}</p>
@@ -512,36 +641,50 @@ export async function TenantPublicSite({ slug, origin }: { slug: string; origin:
                   </div>
                 </div>
               ) : null}
-              {resolvedAddressLabel ? <p><span className="text-white">Endereço:</span> {resolvedAddressLabel}</p> : null}
+              {resolvedAddressLabel ? <p><span className="text-landing-text">Endereço:</span> {resolvedAddressLabel}</p> : null}
             </div>
           </div>
 
-          <div className="flex items-center overflow-hidden rounded-[28px] border border-white/10 bg-[#11161d] p-4">
+          <div className={`flex flex-col items-stretch overflow-hidden rounded-[28px] border border-black/10 ${LANDING_SECTION_GRADIENT} p-4`}>
             {resolvedMapEmbedUrl ? (
               <iframe
                 src={resolvedMapEmbedUrl}
-                className="my-auto h-[320px] w-full rounded-[24px] border-0"
+                className="h-[320px] w-full rounded-[24px] border-0"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 title={`Mapa ${companyName}`}
               />
+            ) : resolvedAddressLabel ? (
+              <div className="flex h-[320px] w-full flex-col items-center justify-center gap-3 rounded-[24px] bg-black/20 px-6 text-center text-sm text-landing-text">
+                <p>{resolvedAddressLabel}</p>
+                {mapsLink ? (
+                  <a href={mapsLink} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-[var(--accent)] px-4 text-sm font-semibold text-landing-text">
+                    Ver no Google Maps
+                  </a>
+                ) : null}
+              </div>
             ) : (
-              <div className="flex h-[320px] w-full items-center justify-center rounded-[24px] bg-black/20 text-sm text-white/40">
-                Mapa ainda não configurado.
+              <div className="flex h-[320px] w-full items-center justify-center rounded-[24px] bg-black/20 text-sm text-landing-text">
+                Endereço não cadastrado no cadastro.
               </div>
             )}
+            {mapsLink ? (
+              <a href={mapsLink} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-black/10 bg-black/5 px-4 text-sm text-landing-text">
+                Abrir no Google Maps
+              </a>
+            ) : null}
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,245,212,0.16),rgba(17,22,29,1))] p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/42">Agendamento</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">Quer agendar agora?</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">
+        <section className={`rounded-[30px] border border-black/10 ${LANDING_CARD_GRADIENT} p-6`}>
+          <p className="text-xs uppercase tracking-[0.3em] text-landing-text">Agendamento</p>
+          <h2 className="mt-2 text-3xl font-semibold text-landing-text">Quer agendar agora?</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-landing-text">
             Fale direto com a equipe e solicite seu orçamento sem sair desta página.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             {whatsappUrl ? (
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent)] px-5 text-sm font-semibold text-slate-950">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent)] px-5 text-sm font-semibold text-landing-text">
                 Chamar no WhatsApp
               </a>
             ) : null}

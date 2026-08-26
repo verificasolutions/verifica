@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "leads:qualify": "powershell -ExecutionPolicy Bypass -File scripts/qualify-receita-leads.ps1"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^4.1.11",
     "wrangler": "^4.105.0"
   }
 }

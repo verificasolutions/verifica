@@ -16,7 +16,7 @@ export async function createAppointmentDraftAction(formData: FormData) {
   const scheduledFor = String(formData.get("scheduled_for") ?? "").trim();
 
   if (!scheduledFor) {
-    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), error: encodeURIComponent("Escolha data e horário.") }));
+    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), selected: encodeURIComponent(serviceIds.join(",")), error: encodeURIComponent("Escolha data e horário.") }));
   }
 
   const result = await createAppointmentDraftUseCase({
@@ -28,11 +28,11 @@ export async function createAppointmentDraftAction(formData: FormData) {
   });
 
   if (result.error || !result.data) {
-    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), error: encodeURIComponent(result.error ?? "Erro.") }));
+    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), selected: encodeURIComponent(serviceIds.join(",")), error: encodeURIComponent(result.error ?? "Erro.") }));
   }
 
   redirect(
-    flowUrl({ vehicle: encodeURIComponent(vehicleId), draft: result.data.draftId, scheduled_for: encodeURIComponent(scheduledFor) }),
+    flowUrl({ vehicle: encodeURIComponent(vehicleId), selected: encodeURIComponent(serviceIds.join(",")), draft: result.data.draftId, scheduled_for: encodeURIComponent(scheduledFor) }),
   );
 }
 

@@ -23,10 +23,10 @@ export async function createOrderDraftAction(formData: FormData) {
   });
 
   if (result.error || !result.data) {
-    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), error: encodeURIComponent(result.error ?? "Erro.") }));
+    redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), selected: encodeURIComponent(serviceIds.join(",")), error: encodeURIComponent(result.error ?? "Erro.") }));
   }
 
-  redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), draft: result.data.draftId }));
+  redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), selected: encodeURIComponent(serviceIds.join(",")), draft: result.data.draftId }));
 }
 
 export async function confirmOrderAction(formData: FormData) {

@@ -2,24 +2,27 @@ import Link from "next/link";
 import { requireCustomer } from "@/backend/auth/guards";
 import { rpcCustomerListVehicles } from "@/backend/repos/customer-rpc-repo";
 import { rpcCustomerLoyaltySummary } from "@/backend/repos/customer-rpc-repo";
+import { getPublicTenantSiteCritical } from "@/backend/repos/public-tenant-site-repo";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function FidelidadePage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const { token } = await requireCustomer();
+  const { token, customer } = await requireCustomer();
   const vehicles = await rpcCustomerListVehicles(token);
   const vehicleId = String(params.vehicle ?? vehicles.data?.[0]?.id ?? "");
   const summary = vehicleId ? await rpcCustomerLoyaltySummary({ token, vehicleId }) : null;
   const vehicle = (vehicles.data ?? []).find((v) => v.id === vehicleId);
   const data = summary?.data;
+  const site = customer.tenantSlug ? await getPublicTenantSiteCritical(customer.tenantSlug) : null;
 
   const washesRequired = data?.washes_required ?? 10;
   const washesCompleted = data?.washes_completed ?? 0;
   const positions = Array.from({ length: washesRequired }, (_, index) => index + 1);
 
   return (
-    <main className="mx-auto w-full max-w-md space-y-4 px-4 py-6">
+    <main className="relative isolate mx-auto min-h-[100dvh] w-full max-w-md space-y-4 overflow-hidden px-4 py-6">
+      {site?.landing?.cover_image_url ? <div aria-hidden="true" className="customer-portal-banner pointer-events-none fixed inset-0 -z-10 bg-cover bg-center" style={{ backgroundImage: `linear-gradient(rgba(13,17,23,.76),rgba(13,17,23,.94)),url(${JSON.stringify(site.landing.cover_image_url)})` }} /> : null}
       <Link href="/cliente/portal" className="text-sm font-medium text-[color:var(--text-secondary)]">
         ← Voltar
       </Link>

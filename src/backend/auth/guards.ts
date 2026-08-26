@@ -66,7 +66,7 @@ export async function requireCustomer() {
   const customer = await validateCustomerSession(token);
 
   if (!customer) {
-    redirect("/verifica/cliente/entrar");
+  redirect("/cliente/entrar");
   }
 
   return { token: token as string, customer };

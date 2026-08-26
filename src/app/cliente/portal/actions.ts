@@ -17,7 +17,7 @@ export async function logoutAction() {
   const { token } = await requireCustomer();
   await logoutCustomerUseCase({ token });
   await clearCustomerSessionCookie();
-  redirect("/verifica/cliente/entrar");
+    redirect("/cliente/entrar");
 }
 
 export async function linkVehicleAction(formData: FormData) {

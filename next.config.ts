@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/verifica/cliente/:path*",
+        destination: "/cliente/:path*",
+        permanent: false,
+      },
+      {
         source: "/login",
         destination: "/verifica/login",
         permanent: false,

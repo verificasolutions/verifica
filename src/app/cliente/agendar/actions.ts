@@ -6,7 +6,7 @@ import { createAppointmentDraftUseCase, confirmAppointmentUseCase } from "@/back
 
 function flowUrl(params: Record<string, string>) {
   const search = new URLSearchParams(params);
-  return `/verifica/cliente/agendar?${search.toString()}`;
+  return `/cliente/agendar?${search.toString()}`;
 }
 
 export async function createAppointmentDraftAction(formData: FormData) {
@@ -50,7 +50,7 @@ export async function confirmAppointmentAction(formData: FormData) {
     );
   }
 
-  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
+  redirect(`/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
 }
 
 export async function submitAppointmentAction(formData: FormData) {
@@ -63,5 +63,5 @@ export async function submitAppointmentAction(formData: FormData) {
   if (draft.error || !draft.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), scheduled_for: scheduledFor, error: draft.error ?? "Selecione os serviços." }));
   const result = await confirmAppointmentUseCase({ token, customer, draftId: draft.data.draftId, scheduledFor });
   if (result.error || !result.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), scheduled_for: scheduledFor, error: result.error ?? "Não foi possível confirmar." }));
-  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
+  redirect(`/cliente/portal?ok=${encodeURIComponent("Agendamento confirmado.")}`);
 }

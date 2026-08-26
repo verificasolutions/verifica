@@ -7,7 +7,7 @@ import { confirmOrderUseCase } from "@/backend/use-cases/customer/confirm-order"
 
 function flowUrl(params: Record<string, string>) {
   const search = new URLSearchParams(params);
-  return `/verifica/cliente/lavar-agora?${search.toString()}`;
+  return `/cliente/lavar-agora?${search.toString()}`;
 }
 
 export async function createOrderDraftAction(formData: FormData) {
@@ -40,7 +40,7 @@ export async function confirmOrderAction(formData: FormData) {
     redirect(flowUrl({ vehicle: encodeURIComponent(vehicleId), error: encodeURIComponent(result.error ?? "Erro.") }));
   }
 
-  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
+  redirect(`/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
 }
 
 export async function submitOrderAction(formData: FormData) {
@@ -51,5 +51,5 @@ export async function submitOrderAction(formData: FormData) {
   if (draft.error || !draft.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), error: draft.error ?? "Selecione os serviços." }));
   const result = await confirmOrderUseCase({ token, customer, draftId: draft.data.draftId });
   if (result.error || !result.data) redirect(flowUrl({ vehicle: vehicleId, selected: serviceIds.join(","), error: result.error ?? "Não foi possível confirmar." }));
-  redirect(`/verifica/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
+  redirect(`/cliente/portal?ok=${encodeURIComponent("Pedido criado. Acompanhe o status na operação.")}`);
 }

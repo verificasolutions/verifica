@@ -1,4 +1,5 @@
 import { resolveTenantAction, submitPhonePlateAction, loginAction, registerAction } from "./actions";
+import Link from "next/link";
 import { SubmitButton } from "@/components/cliente/submit-button";
 import { getPublicTenantSiteCritical } from "@/backend/repos/public-tenant-site-repo";
 
@@ -248,6 +249,10 @@ export default async function ClienteEntrarPage({ searchParams }: { searchParams
                       className="mt-1.5 min-h-11 w-full rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] px-4 text-[color:var(--text-primary)] outline-none focus:border-[var(--accent)]"
                       placeholder="Crie uma senha (mín. 6 caracteres)"
                     />
+                  </label>
+                  <label className="flex items-start gap-3 text-xs leading-5 text-[color:var(--text-muted)]">
+                    <input name="privacyAccepted" type="checkbox" required className="mt-1 size-4 accent-[var(--accent)]" />
+                    <span>Li e aceito o <Link href="/privacidade" target="_blank" className="font-semibold underline">Aviso de privacidade</Link>.</span>
                   </label>
                   <SubmitButton pendingLabel="Criando conta...">Criar conta</SubmitButton>
                 </form>

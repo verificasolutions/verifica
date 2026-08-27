@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { resolveTenantEntryUseCase } from "@/backend/use-cases/customer/resolve-tenant-entry";
 import { submitPhonePlateUseCase } from "@/backend/use-cases/customer/submit-phone-plate";
 import { loginCustomerUseCase } from "@/backend/use-cases/customer/login";
@@ -137,6 +137,7 @@ export async function registerAction(formData: FormData) {
   const phone = String(formData.get("phone") ?? "");
   const plate = String(formData.get("plate") ?? "");
   const vehicle = String(formData.get("vehicle") ?? "new");
+  const privacyAccepted = String(formData.get("privacyAccepted") ?? "") === "on";
   try {
     const tenant = await findActiveTenantBySlug(slug);
     if (!tenant) {
@@ -155,6 +156,9 @@ export async function registerAction(formData: FormData) {
       vehicleType: String(formData.get("vehicleType") ?? ""),
       vehicleColor: String(formData.get("vehicleColor") ?? ""),
       password: String(formData.get("password") ?? ""),
+      privacyAccepted,
+      privacyPolicyVersion: "1.0",
+      userAgent: (await headers()).get("user-agent"),
     });
 
     if (result.error || !result.data) {

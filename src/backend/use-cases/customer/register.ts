@@ -3,7 +3,7 @@ import { getEntryToken } from "@/backend/repos/entry-tokens-repo";
 import { findCustomerByPhoneAndPlate, findCustomerByPhoneNormalized, getCustomerCredential, upsertCustomerCredential } from "@/backend/repos/customer-auth-repo";
 import { hashPassword } from "@/backend/shared/password";
 import { createSessionToken, hashSessionToken, getSessionTtlHours } from "@/backend/auth/customer-session";
-import { rpcCustomerLinkVehicle, rpcCustomerRegister, rpcCustomerSessionCreate } from "@/backend/repos/customer-admin-rpc-repo";
+import { recordCustomerPrivacyConsent, rpcCustomerLinkVehicle, rpcCustomerRegister, rpcCustomerSessionCreate } from "@/backend/repos/customer-admin-rpc-repo";
 import { enforceRateLimit, getClientIp } from "@/backend/shared/rate-limit-policy";
 
 export async function registerCustomerUseCase(input: {
@@ -15,12 +15,18 @@ export async function registerCustomerUseCase(input: {
   vehicleType: string;
   vehicleColor: string;
   password: string;
+  privacyAccepted: boolean;
+  privacyPolicyVersion: string;
   userAgent?: string | null;
 }) {
   const ip = await getClientIp();
 
   if (!input.entryToken || !input.password) {
     return { error: "Verifique seus dados." };
+  }
+
+  if (!input.privacyAccepted) {
+    return { error: "Leia e aceite o aviso de privacidade para criar o acesso." };
   }
 
   await enforceRateLimit({ tenantId: input.tenantId, key: `login:ip:${ip}`, limit: 10, windowSeconds: 300 });
@@ -86,6 +92,9 @@ export async function registerCustomerUseCase(input: {
       if (linked.error) return { error: "Senha criada, mas não foi possível cadastrar o novo veículo. Tente novamente." };
     }
 
+    const consentError = await recordCustomerPrivacyConsent({ customerId: existing.id, tenantId: input.tenantId, policyVersion: input.privacyPolicyVersion, userAgent: input.userAgent ?? null });
+    if (consentError) return { error: "Não foi possível registrar o aceite de privacidade. Tente novamente." };
+
     return { data: { token: rawToken, expiresAt, vehicleLinked: !existingVehicle } };
   }
 
@@ -132,6 +141,9 @@ export async function registerCustomerUseCase(input: {
   if (session.error || !session.data) {
     return { error: "Não foi possível iniciar a sessão. Tente novamente." };
   }
+
+  const consentError = await recordCustomerPrivacyConsent({ customerId: registered.data.id, tenantId: registered.data.tenant_id, policyVersion: input.privacyPolicyVersion, userAgent: input.userAgent ?? null });
+  if (consentError) return { error: "Não foi possível registrar o aceite de privacidade. Tente novamente." };
 
   // veículo: no caminho atômico já foi criado; no canônico (remoto) vincula agora com a
   // sessão recém-criada. Falha de vínculo não derruba o cadastro (o portal permite vincular depois).

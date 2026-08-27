@@ -52,6 +52,19 @@ export async function rpcCustomerRegister(input: { entryTokenHash: string; name:
   };
 }
 
+export async function recordCustomerPrivacyConsent(input: { customerId: string; tenantId: string; policyVersion: string; userAgent?: string | null }) {
+  const admin = createSupabaseAdminClient() as any;
+  const { error } = await admin.from("customer_privacy_consents").upsert({
+    customer_id: input.customerId,
+    tenant_id: input.tenantId,
+    policy_version: input.policyVersion,
+    consent_type: "privacy_notice",
+    source: "customer_portal",
+    user_agent: input.userAgent ?? null,
+  }, { onConflict: "customer_id,consent_type,policy_version", ignoreDuplicates: true });
+  return error as { message: string } | null;
+}
+
 /** Vincula veículo ao cliente logado (RPC canônica 20260906; válida o token de sessão). */
 export async function rpcCustomerLinkVehicle(input: {
   tokenHash: string;

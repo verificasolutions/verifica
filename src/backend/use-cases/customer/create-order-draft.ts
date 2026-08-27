@@ -33,8 +33,8 @@ export async function createOrderDraftUseCase(input: {
   if (selected.length !== uniqueServiceIds.length) {
     return { error: "Serviço inválido ou inativo." };
   }
-  if (selected.filter((item) => item.kind === "main").length !== 1) {
-    return { error: "Selecione exatamente 1 serviço principal." };
+  if (selected.filter((item) => item.kind === "main").length < 1) {
+    return { error: "Selecione ao menos 1 serviço principal." };
   }
 
   const idempotencyKey = randomUUID();
